@@ -2,11 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-add-buffalo-cattle-functionality-so-that-submitting-the-cattleform-successfully-creates-a-new-cattle-record-in-the-backend-and-the-new-record-appears-in-the-cattle-list-without-errors",
-      "featureTitle": "Fix the 'Add Buffalo/Cattle' functionality so that submitting the CattleForm successfully creates a new cattle record in the backend and the new record appears in the cattle list without errors.",
+      "featureId": "feature-restore-the-logo-in-the-layout-component-frontend-src-components-layout-tsx-to-its-original-appearance-as-it-was-before-version-16-inspect-the-current-logo-markup-and-revert-any-unintended-changes-to-the-logo-image-source-size-styling-or-text-that-were-introduced-during-the-recent-deployment",
+      "featureTitle": "Restore the logo in the Layout component (frontend/src/components/Layout.tsx) to its original appearance as it was before Version 16. Inspect the current logo markup and revert any unintended changes to the logo image source, size, styling, or text that were introduced during the recent deployment.",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/CattleManagement.tsx"
+        "frontend/src/components/Layout.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -18,26 +17,6 @@
       ],
       "testIds": [
         "REQ-1"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-fix-the-add-customer-functionality-so-that-submitting-the-customerform-successfully-creates-a-new-customer-record-in-the-backend-and-the-new-record-appears-in-the-customer-list-without-errors",
-      "featureTitle": "Fix the 'Add Customer' functionality so that submitting the CustomerForm successfully creates a new customer record in the backend and the new record appears in the customer list without errors.",
-      "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/CustomerManagement.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "authorization@4.0.0"
-      ],
-      "testIds": [
-        "REQ-2"
       ],
       "confidence": "high"
     }

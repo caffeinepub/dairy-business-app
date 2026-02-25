@@ -1,58 +1,35 @@
 {
   "kind": "build_request",
-  "title": "Fix buffalo (cattle) and customer adding functionality",
-  "priority": "high",
+  "title": "Restore original logo in Layout header",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the 'Add Buffalo/Cattle' functionality so that submitting the CattleForm successfully creates a new cattle record in the backend and the new record appears in the cattle list without errors.",
-      "target": "both",
+      "text": "Restore the logo in the Layout component (frontend/src/components/Layout.tsx) to its original appearance as it was before Version 16. Inspect the current logo markup and revert any unintended changes to the logo image source, size, styling, or text that were introduced during the recent deployment.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-last"
+          "msg-4"
         ],
         "quotes": [
-          "buffalo and customer adding not working"
+          "everything is ok but logo changed"
         ]
       },
       "acceptanceCriteria": [
-        "User can open the Add Cattle/Buffalo form and fill in all required fields",
-        "Submitting the form sends the correct data to the backend addCattle (or equivalent) method",
-        "The new cattle record appears in the cattle table immediately after submission",
-        "No console errors or silent failures occur during the add operation",
-        "Success feedback (toast or confirmation) is shown after adding"
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "text": "Fix the 'Add Customer' functionality so that submitting the CustomerForm successfully creates a new customer record in the backend and the new record appears in the customer list without errors.",
-      "target": "both",
-      "source": {
-        "messageIds": [
-          "msg-last"
-        ],
-        "quotes": [
-          "buffalo and customer adding not working"
-        ]
-      },
-      "acceptanceCriteria": [
-        "User can open the Add Customer form and fill in all required fields (name, address, phone)",
-        "Submitting the form sends the correct data to the backend addCustomer (or equivalent) method",
-        "The new customer record appears in the customer table immediately after submission",
-        "No console errors or silent failures occur during the add operation",
-        "Success feedback (toast or confirmation) is shown after adding"
+        "The logo displayed in the sticky header matches the original logo design prior to Version 16 changes.",
+        "No other header or navigation elements are affected by the fix.",
+        "The logo renders correctly on both desktop and mobile layouts."
       ]
     }
   ],
   "constraints": [
-    "Do not alter existing data models or remove any existing fields from the Cattle or Customer types",
-    "Do not break the edit or toggle-active functionality for cattle and customers",
-    "Preserve all existing Monthly Report, Delivery, and Milk Production functionality"
+    "Do not modify any files listed under frontend.immutablePaths.",
+    "Do not alter any functionality introduced in Version 16 (Add Buffalo/Cattle and Add Customer fixes)."
   ],
   "nonGoals": [
-    "Redesigning the cattle or customer forms",
-    "Adding new fields to cattle or customer records",
-    "Fixing any issues unrelated to the add operations for cattle and customers"
+    "Redesigning or updating the logo to a new style.",
+    "Changes to any backend logic.",
+    "Modifications to navigation links or other Layout sections."
   ],
   "imageRequirements": {
     "required": [],

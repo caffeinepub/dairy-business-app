@@ -4,30 +4,28 @@
   "summary": "New project",
   "architectural_notes": [],
   "known_issues": [
-    "Buffalo adding not working in current version",
-    "Customer adding not working in current version"
+    "Logo changed unexpectedly after Version 16 deployment"
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-fix-the-add-buffalo-cattle-functionality-so-that-submitting-the-cattleform-successfully-creates-a-new-cattle-record-in-the-backend-and-the-new-record-appears-in-the-cattle-list-without-errors",
-      "title": "Fix the 'Add Buffalo/Cattle' functionality so that submitting the CattleForm successfully creates a new cattle record in the backend and the new record appears in the cattle list without errors.",
+      "id": "feature-restore-the-logo-in-the-layout-component-frontend-src-components-layout-tsx-to-its-original-appearance-as-it-was-before-version-16-inspect-the-current-logo-markup-and-revert-any-unintended-changes-to-the-logo-image-source-size-styling-or-text-that-were-introduced-during-the-recent-deployment",
+      "title": "Restore the logo in the Layout component (frontend/src/components/Layout.tsx) to its original appearance as it was before Version 16. Inspect the current logo markup and revert any unintended changes to the logo image source, size, styling, or text that were introduced during the recent deployment.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
-    },
-    {
-      "id": "feature-fix-the-add-customer-functionality-so-that-submitting-the-customerform-successfully-creates-a-new-customer-record-in-the-backend-and-the-new-record-appears-in-the-customer-list-without-errors",
-      "title": "Fix the 'Add Customer' functionality so that submitting the CustomerForm successfully creates a new customer record in the backend and the new record appears in the customer list without errors.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "version": 1
     }
   ],
-  "new_feature_requests": [],
-  "projectName": "Fix buffalo (cattle) and customer adding functionality",
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Fix logo that changed unexpectedly after deployment",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "projectName": "Restore original logo in Layout header",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

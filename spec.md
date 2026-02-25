@@ -1,12 +1,9 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the broken "Add Buffalo/Cattle" and "Add Customer" form submissions so that new records are correctly saved to the backend and appear in their respective lists.
+**Goal:** Restore the logo in the Layout header to its original appearance as it was before Version 16.
 
 **Planned changes:**
-- Fix the CattleForm submission so it correctly calls the backend add method, saves the new cattle record, and refreshes the cattle list
-- Fix the CustomerForm submission so it correctly calls the backend add method, saves the new customer record, and refreshes the customer list
-- Ensure success feedback (toast or confirmation) is displayed after each successful add operation
-- Eliminate any console errors or silent failures during the add operations
+- Revert any unintended changes to the logo image source, size, styling, or text in `frontend/src/components/Layout.tsx` that were introduced in Version 16.
 
-**User-visible outcome:** Users can successfully add new buffalo/cattle and customer records via their respective forms, see the new records appear immediately in the list, and receive confirmation feedback after each submission.
+**User-visible outcome:** The logo in the sticky header displays correctly as it did prior to Version 16, on both desktop and mobile layouts, with no other header or navigation elements affected.

@@ -46,16 +46,10 @@ export default function Layout({ children }: LayoutProps) {
             {/* Logo */}
             <div className="flex items-center gap-3">
               <img
-                src="/assets/generated/dairy-logo.dim_200x60.png"
+                src="/assets/generated/ao-farms-logo.dim_320x160.png"
                 alt="AO Farms"
                 className="h-10 w-auto object-contain"
               />
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-primary font-display leading-tight">
-                  AO Farms
-                </h1>
-                <p className="text-xs text-muted-foreground">Dairy Management</p>
-              </div>
             </div>
 
             {/* Desktop Nav */}

@@ -1,61 +1,21 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix buffalo (cattle) and customer adding functionality",
+  "title": "Restore original logo in Layout header",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Fix the 'Add Buffalo/Cattle' functionality so that submitting the CattleForm successfully creates a new cattle record and the new record appears in the cattle list without errors",
+      "summary": "Restore the logo in the Layout component header to its original appearance before Version 16 by reverting unintended changes to the logo image source, size, styling, or text",
       "acceptanceCriteria": [
-        "User can open the Add Cattle/Buffalo form and fill in all required fields",
-        "Submitting the form sends the correct data to the backend addCattle method",
-        "The new cattle record appears in the cattle table immediately after submission",
-        "No console errors or silent failures occur during the add operation",
-        "Success feedback (toast or confirmation) is shown after adding"
+        "The logo displayed in the sticky header matches the original logo design prior to Version 16 changes.",
+        "No other header or navigation elements are affected by the fix.",
+        "The logo renders correctly on both desktop and mobile layouts."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/CattleForm.tsx",
+          "path": "frontend/src/components/Layout.tsx",
           "operation": "modify",
-          "description": "Review and fix the cattle form submission logic to ensure all required fields (breed, ageMonths, dailyMilkProductionLiters, healthStatus, purchaseDate, purchaseCost, notes) are correctly collected and passed to the backend. Ensure the healthStatus field is properly structured as a variant type matching the backend interface (healthy, sick with treatment/medications/condition, or recovered). Add proper error handling and validation feedback."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Review and fix the addCattle mutation hook to ensure it correctly calls the backend addCattle method with all required parameters in the correct order and types. Verify the mutation includes proper success handling (query invalidation for 'allCattle' and 'healthyCattle'), error handling, and returns the new cattle ID. Add success toast notification on successful cattle creation."
-        },
-        {
-          "path": "frontend/src/pages/CattleManagement.tsx",
-          "operation": "modify",
-          "description": "Review and fix the integration between the CattleForm component and the addCattle mutation. Ensure the form dialog properly opens, the onSubmit handler correctly invokes the mutation with form data, handles loading states during submission, displays success feedback, closes the dialog on success, and shows error messages if the mutation fails. Verify the cattle list automatically refreshes after successful addition."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Fix the 'Add Customer' functionality so that submitting the CustomerForm successfully creates a new customer record and the new record appears in the customer list without errors",
-      "acceptanceCriteria": [
-        "User can open the Add Customer form and fill in all required fields (name, address, phone)",
-        "Submitting the form sends the correct data to the backend addCustomer method",
-        "The new customer record appears in the customer table immediately after submission",
-        "No console errors or silent failures occur during the add operation",
-        "Success feedback (toast or confirmation) is shown after adding"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/CustomerForm.tsx",
-          "operation": "modify",
-          "description": "Review and fix the customer form submission logic to ensure all required fields (name, address, phone) are correctly collected and validated before submission. Remove or disable the activeStatus toggle when in add mode since new customers should default to active in the backend. Add proper error handling and field validation feedback."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Review and fix the addCustomer mutation hook to ensure it correctly calls the backend addCustomer method with all required parameters (name, address, phone) in the correct order and types. Verify the mutation includes proper success handling (query invalidation for 'customers'), error handling, and returns the new customer ID. Add success toast notification on successful customer creation."
-        },
-        {
-          "path": "frontend/src/pages/CustomerManagement.tsx",
-          "operation": "modify",
-          "description": "Review and fix the integration between the CustomerForm component and the addCustomer mutation. Ensure the form dialog properly opens, the onSubmit handler correctly invokes the mutation with form data, handles loading states during submission, displays success feedback, closes the dialog on success, and shows error messages if the mutation fails. Verify the customer list and stats automatically refresh after successful addition."
+          "description": "Inspect the current logo markup in the sticky header and revert any unintended changes to the logo image source (verify correct asset path from frontend/public/assets/generated/dairy-logo.dim_200x60.png or frontend/public/assets/generated/ao-farms-logo.dim_320x160.png), size attributes, styling classes, or accompanying text that were introduced in Version 16. Ensure the logo uses the correct original asset and styling without altering navigation links or other Layout functionality."
         }
       ]
     }
