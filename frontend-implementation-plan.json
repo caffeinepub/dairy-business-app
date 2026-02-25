@@ -1,115 +1,61 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Add Monthly Reports Page",
+  "title": "Fix buffalo (cattle) and customer adding functionality",
   "requirements": [
     {
-      "id": "REQ-17",
-      "summary": "Add React Query hooks for fetching delivery records and milk production records by month/year",
+      "id": "REQ-1",
+      "summary": "Fix the 'Add Buffalo/Cattle' functionality so that submitting the CattleForm successfully creates a new cattle record and the new record appears in the cattle list without errors",
       "acceptanceCriteria": [
-        "A hook exists for fetching delivery records filtered by month and year",
-        "A hook exists for fetching milk production records filtered by month and year",
-        "Hooks use the existing actor pattern from useQueries.ts"
+        "User can open the Add Cattle/Buffalo form and fill in all required fields",
+        "Submitting the form sends the correct data to the backend addCattle method",
+        "The new cattle record appears in the cattle table immediately after submission",
+        "No console errors or silent failures occur during the add operation",
+        "Success feedback (toast or confirmation) is shown after adding"
       ],
       "file_operations": [
+        {
+          "path": "frontend/src/components/CattleForm.tsx",
+          "operation": "modify",
+          "description": "Review and fix the cattle form submission logic to ensure all required fields (breed, ageMonths, dailyMilkProductionLiters, healthStatus, purchaseDate, purchaseCost, notes) are correctly collected and passed to the backend. Ensure the healthStatus field is properly structured as a variant type matching the backend interface (healthy, sick with treatment/medications/condition, or recovered). Add proper error handling and validation feedback."
+        },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add two new query hooks: useGetDeliveryRecordsByMonth(month: number, year: number) and useGetMilkRecordsByMonth(month: number, year: number). Both hooks should call the corresponding backend methods (getDeliveryRecordsByMonth and getMilkRecordsByMonth) using the actor pattern established in this file. Use React Query's useQuery with query keys that include month and year parameters for proper cache invalidation. Enable the queries only when the actor is available."
-        }
-      ]
-    },
-    {
-      "id": "REQ-18",
-      "summary": "Create Monthly Reports page with month/year selector at route /reports",
-      "acceptanceCriteria": [
-        "Route /reports renders the Monthly Reports page",
-        "Page has a month and year selector defaulting to the current month/year",
-        "Changing the month/year selector refreshes all report data on the page",
-        "Page is wrapped in the existing Layout component and uses the farm-themed card-based design"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/MonthlyReports.tsx",
-          "operation": "create",
-          "description": "Create a new page component that renders the Monthly Reports interface. Include state management for selected month and year (defaulting to current month/year using new Date()). Render a month/year selector at the top using select elements styled consistently with the farm theme. Include two main sections below the selector: Monthly Delivery Report and Monthly Milk Production Report. Wrap the entire page in a Layout component and use the card-based design pattern with warm greens and ambers matching the existing pages (bg-surface, border-primary classes). Pass the selected month and year to child components or hooks that fetch and display the data."
+          "description": "Review and fix the addCattle mutation hook to ensure it correctly calls the backend addCattle method with all required parameters in the correct order and types. Verify the mutation includes proper success handling (query invalidation for 'allCattle' and 'healthyCattle'), error handling, and returns the new cattle ID. Add success toast notification on successful cattle creation."
         },
         {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/pages/CattleManagement.tsx",
           "operation": "modify",
-          "description": "Add a new route for /reports that renders the MonthlyReports page component. Import the MonthlyReports component and add it to the router configuration alongside the existing routes (/, /cattle, /milk, /inventory, /customers, /deliveries). Ensure the route is wrapped in the Layout component consistent with other routes."
+          "description": "Review and fix the integration between the CattleForm component and the addCattle mutation. Ensure the form dialog properly opens, the onSubmit handler correctly invokes the mutation with form data, handles loading states during submission, displays success feedback, closes the dialog on success, and shows error messages if the mutation fails. Verify the cattle list automatically refreshes after successful addition."
         }
       ]
     },
     {
-      "id": "REQ-19",
-      "summary": "Display Monthly Delivery Report section with summary totals, per-customer breakdown, and per-delivery-boy performance tables",
+      "id": "REQ-2",
+      "summary": "Fix the 'Add Customer' functionality so that submitting the CustomerForm successfully creates a new customer record and the new record appears in the customer list without errors",
       "acceptanceCriteria": [
-        "Summary totals card shows correct aggregated counts for the selected month",
-        "Per-customer breakdown table shows one row per customer with their delivery stats",
-        "Per-delivery-boy table shows one row per delivery boy with their performance stats",
-        "All data reflects the selected month and year"
+        "User can open the Add Customer form and fill in all required fields (name, address, phone)",
+        "Submitting the form sends the correct data to the backend addCustomer method",
+        "The new customer record appears in the customer table immediately after submission",
+        "No console errors or silent failures occur during the add operation",
+        "Success feedback (toast or confirmation) is shown after adding"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/MonthlyReports.tsx",
+          "path": "frontend/src/components/CustomerForm.tsx",
           "operation": "modify",
-          "description": "In the Monthly Delivery Report section, call useGetDeliveryRecordsByMonth with the selected month and year. Calculate summary totals: total deliveries count (all records), total missed deliveries count (status === 'missed'), and total liters delivered (sum of quantityLiters for delivered records). Display these in a summary card at the top of the section. Below the summary, create two tables: (1) Per-customer breakdown: group delivery records by customerId, fetch customer names using the existing useGetCustomers hook, and display each customer's name, total deliveries received (count of records for that customer), total missed (count where status === 'missed'), and total liters (sum of quantityLiters). (2) Per-delivery-boy performance: group delivery records by deliveryBoyName and display each delivery boy's name, total deliveries made (count of records), total missed (count where status === 'missed'), and total liters delivered (sum of quantityLiters). Style tables consistently with the existing table patterns in DeliveryReports.tsx and CustomerManagement.tsx using border-primary and hover states."
-        }
-      ]
-    },
-    {
-      "id": "REQ-20",
-      "summary": "Display Monthly Milk Production Report section with summary card and per-cattle breakdown table",
-      "acceptanceCriteria": [
-        "Summary card shows total milk production in liters for the selected month",
-        "Per-cattle breakdown table shows one row per cattle with total liters for the month",
-        "Data updates when the month/year selector changes"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/MonthlyReports.tsx",
-          "operation": "modify",
-          "description": "In the Monthly Milk Production Report section, call useGetMilkRecordsByMonth with the selected month and year. Calculate the total liters produced by summing the quantityLiters field of all returned records. Display this total in a summary card. Note: The current MilkProductionRecord type does not include a cattleId field, so the per-cattle breakdown cannot be implemented with the existing backend schema. Display a note in the UI stating 'Per-cattle breakdown requires cattleId field in milk production records' or display the records without cattle association. If cattleId becomes available in the future, group records by cattleId and display each cattle's name/ID with their total liters produced. Use table styling consistent with other report tables."
-        }
-      ]
-    },
-    {
-      "id": "REQ-21",
-      "summary": "Add print-friendly view with 'Print Report' button and print-specific CSS",
-      "acceptanceCriteria": [
-        "A 'Print Report' button is visible on the page",
-        "Clicking the button triggers the browser print dialog",
-        "When printing, navigation bar and interactive controls are hidden",
-        "Report tables and summary cards are fully visible and legible in the printed output"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/MonthlyReports.tsx",
-          "operation": "modify",
-          "description": "Add a 'Print Report' button near the top of the page (after the month/year selector) that calls window.print() when clicked. Style the button with the existing farm theme using bg-primary and hover:bg-primary/90 classes. Add a className 'print:hidden' to the button, the month/year selector, and any other interactive controls that should not appear in the printed version. Ensure the Layout component's navigation bar is hidden when printing (the Layout component should already handle this or add print:hidden to navigation elements if needed). Verify that report content (summary cards and tables) uses print-friendly styles with clear borders and black text on white background."
+          "description": "Review and fix the customer form submission logic to ensure all required fields (name, address, phone) are correctly collected and validated before submission. Remove or disable the activeStatus toggle when in add mode since new customers should default to active in the backend. Add proper error handling and field validation feedback."
         },
         {
-          "path": "frontend/src/index.css",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add print-specific CSS media query rules at the end of the file. Hide elements with .print\\:hidden class when printing. Ensure report tables and cards have visible borders and legible text in print mode. Set background colors to white and text colors to black for printed content. Remove any shadows or gradients that don't print well. Ensure page breaks are handled appropriately so tables don't split awkwardly across pages."
-        }
-      ]
-    },
-    {
-      "id": "REQ-22",
-      "summary": "Add 'Reports' navigation link to the Layout component pointing to /reports route",
-      "acceptanceCriteria": [
-        "A 'Reports' link appears in the desktop navigation bar",
-        "A 'Reports' link appears in the mobile hamburger menu",
-        "Clicking the link navigates to /reports",
-        "Active state styling matches the existing nav link pattern"
-      ],
-      "file_operations": [
+          "description": "Review and fix the addCustomer mutation hook to ensure it correctly calls the backend addCustomer method with all required parameters (name, address, phone) in the correct order and types. Verify the mutation includes proper success handling (query invalidation for 'customers'), error handling, and returns the new customer ID. Add success toast notification on successful customer creation."
+        },
         {
-          "path": "frontend/src/components/Layout.tsx",
+          "path": "frontend/src/pages/CustomerManagement.tsx",
           "operation": "modify",
-          "description": "Add a new navigation link for 'Reports' pointing to the /reports route. Insert it in both the desktop navigation bar (alongside Dashboard, Cattle, Milk Production, Inventory, Customers, Deliveries) and the mobile hamburger menu. Use the same Link component pattern and active state styling (isActive check) as the existing nav links. Position the Reports link logically in the navigation order, perhaps after Deliveries since reports aggregate delivery and production data."
+          "description": "Review and fix the integration between the CustomerForm component and the addCustomer mutation. Ensure the form dialog properly opens, the onSubmit handler correctly invokes the mutation with form data, handles loading states during submission, displays success feedback, closes the dialog on success, and shows error messages if the mutation fails. Verify the customer list and stats automatically refresh after successful addition."
         }
       ]
     }

@@ -1,199 +1,204 @@
 import { useState } from 'react';
+import { Users, Plus, Edit2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Users } from 'lucide-react';
 import { useGetCustomers, useAddCustomer, useUpdateCustomer } from '../hooks/useQueries';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import CustomerForm from '../components/CustomerForm';
 import type { Customer } from '../backend';
+import { toast } from 'sonner';
 
 export default function CustomerManagement() {
-    const { data: customers = [], isLoading } = useGetCustomers();
-    const addCustomer = useAddCustomer();
-    const updateCustomer = useUpdateCustomer();
+  const { identity } = useInternetIdentity();
+  const isAuthenticated = !!identity;
 
-    const [showAddDialog, setShowAddDialog] = useState(false);
-    const [editTarget, setEditTarget] = useState<Customer | null>(null);
+  const { data: customers = [], isLoading } = useGetCustomers();
+  const addCustomerMutation = useAddCustomer();
+  const updateCustomerMutation = useUpdateCustomer();
 
-    const handleAdd = (data: { name: string; address: string; phone: string; activeStatus: boolean }) => {
-        addCustomer.mutate(data, {
-            onSuccess: () => setShowAddDialog(false),
-        });
-    };
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
-    const handleEdit = (data: { name: string; address: string; phone: string; activeStatus: boolean }) => {
-        if (!editTarget) return;
-        updateCustomer.mutate({ id: editTarget.id, ...data }, {
-            onSuccess: () => setEditTarget(null),
-        });
-    };
+  const activeCustomers = customers.filter((c) => c.activeStatus);
 
-    const handleToggleStatus = (c: Customer) => {
-        updateCustomer.mutate({
-            id: c.id,
-            name: c.name,
-            address: c.address,
-            phone: c.phone,
-            activeStatus: !c.activeStatus,
-        });
-    };
+  const handleEditOpen = (c: Customer) => {
+    setEditingCustomer(c);
+    setEditDialogOpen(true);
+  };
 
-    const activeCount = customers.filter((c) => c.activeStatus).length;
-    const inactiveCount = customers.filter((c) => !c.activeStatus).length;
-
-    return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                        <Users className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-foreground">Customer Management</h1>
-                        <p className="text-sm text-muted-foreground">Manage your milk delivery customers</p>
-                    </div>
-                </div>
-                <Button onClick={() => setShowAddDialog(true)} className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Add Customer
-                </Button>
-            </div>
-
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-4">
-                {[
-                    { label: 'Total', value: customers.length, color: 'text-foreground' },
-                    { label: 'Active', value: activeCount, color: 'text-success' },
-                    { label: 'Inactive', value: inactiveCount, color: 'text-muted-foreground' },
-                ].map(({ label, value, color }) => (
-                    <Card key={label} className="shadow-card">
-                        <CardContent className="pt-4 pb-3 text-center">
-                            <p className={`text-2xl font-bold ${color}`}>{isLoading ? '—' : value}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            {/* Table */}
-            <Card className="shadow-card">
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold">All Customers</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {isLoading ? (
-                        <div className="p-4 space-y-3">
-                            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-                        </div>
-                    ) : customers.length === 0 ? (
-                        <div className="py-12 text-center text-muted-foreground">
-                            <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                            <p className="font-medium">No customers yet</p>
-                            <p className="text-sm mt-1">Click "Add Customer" to get started</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Address</TableHead>
-                                        <TableHead>Phone</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {customers.map((c) => (
-                                        <TableRow key={String(c.id)}>
-                                            <TableCell className="font-semibold">{c.name}</TableCell>
-                                            <TableCell className="text-muted-foreground">{c.address || '—'}</TableCell>
-                                            <TableCell className="text-muted-foreground">{c.phone || '—'}</TableCell>
-                                            <TableCell>
-                                                {c.activeStatus ? (
-                                                    <Badge className="bg-success text-success-foreground border-0">Active</Badge>
-                                                ) : (
-                                                    <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => handleToggleStatus(c)}
-                                                        disabled={updateCustomer.isPending}
-                                                        className="text-xs"
-                                                    >
-                                                        {c.activeStatus ? 'Deactivate' : 'Activate'}
-                                                    </Button>
-                                                    <Button
-                                                        size="icon"
-                                                        variant="outline"
-                                                        onClick={() => setEditTarget(c)}
-                                                        className="h-8 w-8"
-                                                    >
-                                                        <Pencil className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            {/* Add Dialog */}
-            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Add New Customer</DialogTitle>
-                    </DialogHeader>
-                    <CustomerForm
-                        mode="add"
-                        onSubmit={handleAdd}
-                        onCancel={() => setShowAddDialog(false)}
-                        isLoading={addCustomer.isPending}
-                    />
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit Dialog */}
-            <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edit Customer — {editTarget?.name}</DialogTitle>
-                    </DialogHeader>
-                    {editTarget && (
-                        <CustomerForm
-                            mode="edit"
-                            initialValues={editTarget}
-                            onSubmit={handleEdit}
-                            onCancel={() => setEditTarget(null)}
-                            isLoading={updateCustomer.isPending}
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground font-display">Customer Management</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {customers.length} customers — {activeCustomers.length} active
+          </p>
         </div>
-    );
+        {isAuthenticated && (
+          <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Add Customer
+          </Button>
+        )}
+      </div>
+
+      {!isAuthenticated && (
+        <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm">
+            You are viewing in read-only mode. Please log in to manage customers.
+          </p>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {[
+          { label: 'Total', value: customers.length },
+          { label: 'Active', value: activeCustomers.length },
+          { label: 'Inactive', value: customers.length - activeCustomers.length },
+        ].map(({ label, value }) => (
+          <Card key={label}>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-bold text-foreground">{value}</p>
+              <p className="text-xs text-muted-foreground mt-1">{label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" />
+            Customer Records
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="text-center py-10 text-muted-foreground">Loading customers…</div>
+          ) : customers.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              No customers yet. Add your first customer to get started.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Status</TableHead>
+                    {isAuthenticated && <TableHead>Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customers.map((c) => (
+                    <TableRow key={c.id.toString()}>
+                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{c.address}</TableCell>
+                      <TableCell className="text-sm">{c.phone}</TableCell>
+                      <TableCell>
+                        <Badge variant={c.activeStatus ? 'default' : 'secondary'}>
+                          {c.activeStatus ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      {isAuthenticated && (
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditOpen(c)}
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Customer</DialogTitle>
+          </DialogHeader>
+          <CustomerForm
+            onSubmit={async (data) => {
+              try {
+                await addCustomerMutation.mutateAsync({
+                  name: data.name,
+                  address: data.address,
+                  phone: data.phone,
+                });
+                toast.success('Customer added successfully!');
+                setAddDialogOpen(false);
+              } catch (err) {
+                toast.error('Failed to add customer. Please try again.');
+              }
+            }}
+            isLoading={addCustomerMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+          </DialogHeader>
+          {editingCustomer && (
+            <CustomerForm
+              initialValues={editingCustomer}
+              onSubmit={async (data) => {
+                try {
+                  await updateCustomerMutation.mutateAsync({
+                    customerId: editingCustomer.id,
+                    name: data.name,
+                    address: data.address,
+                    phone: data.phone,
+                  });
+                  toast.success('Customer updated successfully!');
+                  setEditDialogOpen(false);
+                  setEditingCustomer(null);
+                } catch (err) {
+                  toast.error('Failed to update customer. Please try again.');
+                }
+              }}
+              isLoading={updateCustomerMutation.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

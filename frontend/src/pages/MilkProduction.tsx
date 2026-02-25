@@ -1,269 +1,246 @@
 import { useState, useMemo } from 'react';
+import { Droplets, Plus, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
-import { Droplets, Plus, Loader2, TrendingUp } from 'lucide-react';
 import {
-    useGetAllCattle,
-    useGetAllMilkRecords,
-    useAddMilkRecord,
-    formatDate,
-    timeToDate,
+  useGetAllMilkRecords,
+  useAddMilkRecord,
+  useGetAllCattle,
+  nanosecondsToDate,
+  dateToNanoseconds,
 } from '../hooks/useQueries';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import MilkProductionChart from '../components/MilkProductionChart';
+import type { MilkRecord } from '../backend';
 
 export default function MilkProduction() {
-    const { data: cattle = [], isLoading: cattleLoading } = useGetAllCattle();
-    const { data: milkRecords = [], isLoading: milkLoading } = useGetAllMilkRecords();
-    const addMilkRecord = useAddMilkRecord();
+  const { identity } = useInternetIdentity();
+  const isAuthenticated = !!identity;
 
-    // Form state
-    const [cattleId, setCattleId] = useState('');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [quantity, setQuantity] = useState('');
-    const [notes, setNotes] = useState('');
+  const { data: milkRecords = [], isLoading } = useGetAllMilkRecords();
+  const { data: cattle = [] } = useGetAllCattle();
+  const addMilkRecord = useAddMilkRecord();
 
-    // Filter state
-    const [filterFrom, setFilterFrom] = useState('');
-    const [filterTo, setFilterTo] = useState('');
+  const [cattleId, setCattleId] = useState('');
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [quantity, setQuantity] = useState('');
+  const [notes, setNotes] = useState('');
 
-    const cattleMap = useMemo(() => {
-        const map = new Map<string, string>();
-        cattle.forEach((c) => map.set(String(c.id), c.name));
-        return map;
-    }, [cattle]);
+  const [filterStart, setFilterStart] = useState('');
+  const [filterEnd, setFilterEnd] = useState('');
 
-    const filteredRecords = useMemo(() => {
-        let records = [...milkRecords].sort((a, b) => Number(b.date - a.date));
-        if (filterFrom) {
-            const from = new Date(filterFrom).getTime();
-            records = records.filter((r) => timeToDate(r.date).getTime() >= from);
-        }
-        if (filterTo) {
-            const to = new Date(filterTo).getTime() + 86400000;
-            records = records.filter((r) => timeToDate(r.date).getTime() <= to);
-        }
-        return records;
-    }, [milkRecords, filterFrom, filterTo]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cattleId || !date || !quantity) return;
 
-    const totalFiltered = useMemo(() => filteredRecords.reduce((s, r) => s + r.quantity, 0), [filteredRecords]);
+    await addMilkRecord.mutateAsync({
+      cattleId: BigInt(cattleId),
+      date: dateToNanoseconds(new Date(date)),
+      quantityLiters: parseFloat(quantity),
+      notes,
+    });
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!cattleId || !date || !quantity) return;
-        addMilkRecord.mutate(
-            {
-                cattleId: BigInt(cattleId),
-                date: new Date(date),
-                quantity: parseFloat(quantity),
-                notes,
-            },
-            {
-                onSuccess: () => {
-                    setCattleId('');
-                    setDate(new Date().toISOString().split('T')[0]);
-                    setQuantity('');
-                    setNotes('');
-                },
-            }
-        );
-    };
+    setCattleId('');
+    setQuantity('');
+    setNotes('');
+  };
 
-    return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                    <Droplets className="w-5 h-5 text-primary" />
+  const filteredRecords = useMemo(() => {
+    let records = [...milkRecords];
+    if (filterStart) {
+      const start = dateToNanoseconds(new Date(filterStart));
+      records = records.filter((r) => r.date >= start);
+    }
+    if (filterEnd) {
+      const end = dateToNanoseconds(new Date(filterEnd + 'T23:59:59'));
+      records = records.filter((r) => r.date <= end);
+    }
+    return records.sort((a, b) => Number(b.date - a.date));
+  }, [milkRecords, filterStart, filterEnd]);
+
+  const totalLiters = filteredRecords.reduce((sum, r) => sum + r.quantityLiters, 0);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground font-display">Milk Production</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Track daily milk yield per cattle
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Log Form */}
+        {isAuthenticated && (
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Plus className="w-4 h-4 text-primary" />
+                Log Milk Record
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cattle-select">Cattle</Label>
+                  <Select value={cattleId} onValueChange={setCattleId}>
+                    <SelectTrigger id="cattle-select">
+                      <SelectValue placeholder="Select cattle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cattle.map((c) => (
+                        <SelectItem key={c.id.toString()} value={c.id.toString()}>
+                          #{c.id.toString()} — {c.breed}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                    <h1 className="text-xl font-bold text-foreground">Milk Production</h1>
-                    <p className="text-sm text-muted-foreground">Log and track daily milk yield</p>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="milk-date">Date</Label>
+                  <Input
+                    id="milk-date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    required
+                  />
                 </div>
-            </div>
 
-            {/* Log Form */}
-            <Card className="shadow-card">
-                <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                        <Plus className="w-4 h-4 text-primary" />
-                        Log Milk Record
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="milk-cattle">Cattle</Label>
-                            <Select value={cattleId} onValueChange={setCattleId}>
-                                <SelectTrigger id="milk-cattle">
-                                    <SelectValue placeholder={cattleLoading ? 'Loading...' : 'Select cattle'} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {cattle.map((c) => (
-                                        <SelectItem key={String(c.id)} value={String(c.id)}>
-                                            {c.name}
-                                        </SelectItem>
-                                    ))}
-                                    {cattle.length === 0 && !cattleLoading && (
-                                        <SelectItem value="__none__" disabled>No cattle available</SelectItem>
-                                    )}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="milk-date">Date</Label>
-                            <Input
-                                id="milk-date"
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="milk-qty">Quantity (L)</Label>
-                            <Input
-                                id="milk-qty"
-                                type="number"
-                                min="0"
-                                step="0.1"
-                                value={quantity}
-                                onChange={(e) => setQuantity(e.target.value)}
-                                placeholder="e.g. 12.5"
-                                required
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="milk-notes">Notes</Label>
-                            <Input
-                                id="milk-notes"
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                placeholder="Optional notes"
-                            />
-                        </div>
-                        <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
-                            <Button
-                                type="submit"
-                                disabled={addMilkRecord.isPending || !cattleId || !quantity}
-                                className="gap-2 min-w-[140px]"
-                            >
-                                {addMilkRecord.isPending ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Droplets className="w-4 h-4" />
-                                )}
-                                {addMilkRecord.isPending ? 'Saving...' : 'Log Record'}
-                            </Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
+                <div className="space-y-1.5">
+                  <Label htmlFor="milk-qty">Quantity (Liters)</Label>
+                  <Input
+                    id="milk-qty"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder="e.g. 12.5"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    required
+                  />
+                </div>
 
-            {/* Chart */}
-            <Card className="shadow-card">
-                <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                        <TrendingUp className="w-4 h-4 text-primary" />
-                        7-Day Production Trend
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {milkLoading ? (
-                        <Skeleton className="h-[220px] w-full" />
-                    ) : (
-                        <MilkProductionChart records={milkRecords} />
-                    )}
-                </CardContent>
-            </Card>
+                <div className="space-y-1.5">
+                  <Label htmlFor="milk-notes">Notes</Label>
+                  <Textarea
+                    id="milk-notes"
+                    placeholder="Optional notes…"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
 
-            {/* Records Table */}
-            <Card className="shadow-card">
-                <CardHeader className="pb-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <CardTitle className="text-base font-semibold">
-                            Milk Records
-                            {!milkLoading && (
-                                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                    ({filteredRecords.length} records · {totalFiltered.toFixed(1)} L total)
-                                </span>
-                            )}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 text-sm">
-                            <Label className="text-muted-foreground shrink-0">From</Label>
-                            <Input
-                                type="date"
-                                value={filterFrom}
-                                onChange={(e) => setFilterFrom(e.target.value)}
-                                className="w-auto h-8 text-sm"
-                            />
-                            <Label className="text-muted-foreground shrink-0">To</Label>
-                            <Input
-                                type="date"
-                                value={filterTo}
-                                onChange={(e) => setFilterTo(e.target.value)}
-                                className="w-auto h-8 text-sm"
-                            />
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {milkLoading ? (
-                        <div className="p-4 space-y-3">
-                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-                        </div>
-                    ) : filteredRecords.length === 0 ? (
-                        <div className="py-12 text-center text-muted-foreground">
-                            <Droplets className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                            <p className="font-medium">No milk records found</p>
-                            <p className="text-sm mt-1">Log a record using the form above</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Cattle</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead className="text-right">Quantity</TableHead>
-                                        <TableHead>Notes</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredRecords.map((r) => (
-                                        <TableRow key={String(r.id)}>
-                                            <TableCell className="font-semibold">
-                                                {cattleMap.get(String(r.cattleId)) ?? `Cattle #${r.cattleId}`}
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground">{formatDate(r.date)}</TableCell>
-                                            <TableCell className="text-right font-bold">{r.quantity.toFixed(1)} L</TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">{r.notes || '—'}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={addMilkRecord.isPending || !cattleId || !quantity}
+                >
+                  {addMilkRecord.isPending ? 'Saving…' : 'Log Record'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Chart */}
+        <div className={isAuthenticated ? 'lg:col-span-2' : 'lg:col-span-3'}>
+          <MilkProductionChart milkRecords={milkRecords} />
         </div>
-    );
+      </div>
+
+      {/* Filter + Table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Droplets className="w-4 h-4 text-primary" />
+              Records
+              {filteredRecords.length > 0 && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  — Total: {totalLiters.toFixed(1)}L
+                </span>
+              )}
+            </CardTitle>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={filterStart}
+                onChange={(e) => setFilterStart(e.target.value)}
+                className="w-36 h-8 text-sm"
+                placeholder="From"
+              />
+              <span className="text-muted-foreground text-sm">to</span>
+              <Input
+                type="date"
+                value={filterEnd}
+                onChange={(e) => setFilterEnd(e.target.value)}
+                className="w-36 h-8 text-sm"
+                placeholder="To"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="text-center py-10 text-muted-foreground">Loading records…</div>
+          ) : filteredRecords.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              No milk records found for the selected range.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Cattle</TableHead>
+                    <TableHead>Quantity (L)</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRecords.map((record: MilkRecord) => (
+                    <TableRow key={record.id.toString()}>
+                      <TableCell className="text-sm">
+                        {nanosecondsToDate(record.date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-sm">#{record.cattleId.toString()}</TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {record.quantityLiters.toFixed(1)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {record.notes || '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

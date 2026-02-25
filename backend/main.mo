@@ -5,6 +5,7 @@ import Time "mo:core/Time";
 import Order "mo:core/Order";
 import Int "mo:core/Int";
 import Runtime "mo:core/Runtime";
+import Principal "mo:core/Principal";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
@@ -13,6 +14,34 @@ actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
+  public type UserProfile = {
+    name : Text;
+  };
+
+  let userProfiles = Map.empty<Principal, UserProfile>();
+
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get profiles");
+    };
+    userProfiles.get(caller);
+  };
+
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Can only view your own profile");
+    };
+    userProfiles.get(user);
+  };
+
+  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
+    };
+    userProfiles.add(caller, profile);
+  };
+
+  // Customer management types and logic
   type Customer = {
     id : Nat;
     name : Text;
@@ -41,6 +70,72 @@ actor {
     notes : Text;
   };
 
+  // New: MilkRecord type and logic
+  type MilkRecord = {
+    id : Nat;
+    cattleId : Nat;
+    date : Time.Time;
+    quantityLiters : Float;
+    notes : Text;
+  };
+
+  // Cattle management types and logic
+  type Cattle = {
+    id : Nat;
+    breed : Text;
+    ageMonths : Nat;
+    dailyMilkProductionLiters : Float;
+    healthStatus : HealthStatus;
+    purchaseDate : Time.Time;
+    purchaseCost : Float;
+    notes : Text;
+    activeStatus : Bool;
+  };
+
+  type HealthStatus = {
+    #healthy;
+    #sick : {
+      condition : Text;
+      medications : [Text];
+      treatment : Text;
+    };
+    #recovered;
+  };
+
+  type BreedReport = {
+    totalCattle : Nat;
+    averageMilkProduction : Float;
+    healthyCount : Nat;
+    sickCount : Nat;
+    recuperatedCount : Nat;
+  };
+
+  type HealthReport = {
+    healthyCount : Nat;
+    sickCount : Nat;
+    recuperatedCount : Nat;
+    averageDailyMilkProduction : Float;
+    sickBreeds : [Text];
+    averageRecoveryTimeDays : Float;
+    ageWiseRecoveryStats : [AgeGroupRecoveryStats];
+  };
+
+  type AgeGroupRecoveryStats = {
+    ageRange : (Nat, Nat); // (min, max) months
+    recoveryCount : Nat;
+    medianRecoveryTimeDays : Float;
+    minRecoveryTimeDays : Float;
+    maxRecoveryTimeDays : Float;
+  };
+
+  module Cattle {
+    public func compare(x : Cattle, y : Cattle) : Order.Order {
+      if (x.purchaseDate < y.purchaseDate) { return #less };
+      if (x.purchaseDate > y.purchaseDate) { return #greater };
+      Nat.compare(x.id, y.id);
+    };
+  };
+
   module DeliveryRecord {
     public func compare(x : DeliveryRecord, y : DeliveryRecord) : Order.Order {
       if (x.date < y.date) { return #less };
@@ -57,15 +152,28 @@ actor {
     };
   };
 
+  // New: MilkRecord module for sorting/filtering
+  module MilkRecord {
+    public func compare(x : MilkRecord, y : MilkRecord) : Order.Order {
+      if (x.date < y.date) { return #less };
+      if (x.date > y.date) { return #greater };
+      Nat.compare(x.id, y.id);
+    };
+  };
+
   let customers = Map.empty<Nat, Customer>();
   let deliveryRecords = Map.empty<Nat, DeliveryRecord>();
   let milkProductionRecords = Map.empty<Nat, MilkProductionRecord>();
+  let cattleRecords = Map.empty<Nat, Cattle>();
+  let milkRecords = Map.empty<Nat, MilkRecord>();
 
   var nextCustomerId = 1;
   var nextDeliveryRecordId = 1;
   var nextMilkRecordId = 1;
+  var nextCattleId = 1;
+  var nextMilkRecordIdMain = 1; // Separate counter for main MilkRecord IDs
 
-  public shared ({ caller }) func addCustomer(name : Text, address : Text, phone : Text, activeStatus : Bool) : async Nat {
+  public shared ({ caller }) func addCustomer(name : Text, address : Text, phone : Text) : async Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can add customers");
     };
@@ -77,30 +185,12 @@ actor {
       name;
       address;
       phone;
-      activeStatus;
+      activeStatus = false; // Default to not active
+      // TODO: Add activeStatus field in form
     };
 
     customers.add(id, customer);
     id;
-  };
-
-  public shared ({ caller }) func updateCustomer(id : Nat, name : Text, address : Text, phone : Text, activeStatus : Bool) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update customers");
-    };
-    switch (customers.get(id)) {
-      case (null) { Runtime.trap("Customer not found") };
-      case (?_) {
-        let updated : Customer = {
-          id;
-          name;
-          address;
-          phone;
-          activeStatus;
-        };
-        customers.add(id, updated);
-      };
-    };
   };
 
   public query ({ caller }) func getCustomers() : async [Customer] {
@@ -108,6 +198,26 @@ actor {
       Runtime.trap("Unauthorized: Only users can view customers");
     };
     customers.values().toArray();
+  };
+
+  // Customer management functions for updating customer
+  public shared ({ caller }) func updateCustomer(customerId : Nat, name : Text, address : Text, phone : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can update customers");
+    };
+    switch (customers.get(customerId)) {
+      case (null) { Runtime.trap("Customer not found") };
+      case (?_) {
+        let updatedCustomer : Customer = {
+          id = customerId;
+          name;
+          address;
+          phone;
+          activeStatus = false; // Default to inactive
+        };
+        customers.add(customerId, updatedCustomer);
+      };
+    };
   };
 
   public shared ({ caller }) func addDeliveryRecord(
@@ -213,6 +323,200 @@ actor {
         let (recordMonth, recordYear) = getMonthYear(record.date);
         recordMonth == month and recordYear == year
       }
+    );
+  };
+
+  // New: MilkRecord management functions
+  public shared ({ caller }) func addMilkRecord(
+    cattleId : Nat,
+    date : Time.Time,
+    quantityLiters : Float,
+    notes : Text,
+  ) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can add milk records");
+    };
+    if (not cattleRecords.containsKey(cattleId)) {
+      Runtime.trap("Cattle record not found");
+    };
+
+    let id = nextMilkRecordIdMain;
+    nextMilkRecordIdMain += 1;
+
+    let record : MilkRecord = {
+      id;
+      cattleId;
+      date;
+      quantityLiters;
+      notes;
+    };
+
+    milkRecords.add(id, record);
+    id;
+  };
+
+  public query ({ caller }) func getAllMilkRecords() : async [MilkRecord] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view milk records");
+    };
+    milkRecords.values().toArray();
+  };
+
+  public query ({ caller }) func getMilkRecordsByCattle(cattleId : Nat) : async [MilkRecord] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view milk records");
+    };
+    milkRecords.values().toArray().filter(func(r : MilkRecord) : Bool { r.cattleId == cattleId });
+  };
+
+  public query ({ caller }) func getMilkRecordsByDateRange(startDate : Time.Time, endDate : Time.Time) : async [MilkRecord] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view milk records");
+    };
+    milkRecords.values().toArray().filter(
+      func(r) { r.date >= startDate and r.date <= endDate }
+    );
+  };
+
+  // Cattle management functions
+  public shared ({ caller }) func addCattle(
+    breed : Text,
+    ageMonths : Nat,
+    dailyMilkProductionLiters : Float,
+    healthStatus : HealthStatus,
+    purchaseDate : Time.Time,
+    purchaseCost : Float,
+    notes : Text,
+  ) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can add cattle");
+    };
+
+    let id = nextCattleId;
+    nextCattleId += 1;
+
+    let newCattle : Cattle = {
+      id;
+      breed;
+      ageMonths;
+      dailyMilkProductionLiters;
+      healthStatus;
+      purchaseDate;
+      purchaseCost;
+      notes;
+      activeStatus = false; // Default to inactive
+    };
+
+    cattleRecords.add(id, newCattle);
+    id;
+  };
+
+  public query ({ caller }) func getAllCattle() : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray();
+  };
+
+  // Cattle management functions for updating cattle
+  public shared ({ caller }) func updateCattle(
+    cattleId : Nat,
+    breed : Text,
+    ageMonths : Nat,
+    dailyMilkProductionLiters : Float,
+    healthStatus : HealthStatus,
+    purchaseDate : Time.Time,
+    purchaseCost : Float,
+    notes : Text,
+  ) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can update cattle");
+    };
+    switch (cattleRecords.get(cattleId)) {
+      case (null) { Runtime.trap("Cattle record not found") };
+      case (?_) {
+        let updatedCattle : Cattle = {
+          id = cattleId;
+          breed;
+          ageMonths;
+          dailyMilkProductionLiters;
+          healthStatus;
+          purchaseDate;
+          purchaseCost;
+          notes;
+          activeStatus = false;
+        };
+        cattleRecords.add(cattleId, updatedCattle);
+      };
+    };
+  };
+
+  public query ({ caller }) func getCattleByBreed(breed : Text) : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray().filter(func(r) { r.breed == breed });
+  };
+
+  public query ({ caller }) func getCattleByHealthStatus(healthStatus : HealthStatus) : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray().filter(func(r) { r.healthStatus == healthStatus });
+  };
+
+  public query ({ caller }) func getAllHealthyCattle() : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray().filter(func(r) { r.healthStatus == #healthy });
+  };
+
+  public query ({ caller }) func getAllSickCattle() : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray().filter(
+      func(r) {
+        switch (r.healthStatus) {
+          case (#sick(_)) { true };
+          case (_) { false };
+        };
+      }
+    );
+  };
+
+  public query ({ caller }) func getAllRecoveredCattle() : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray().filter(func(r) { r.healthStatus == #recovered });
+  };
+
+  public query ({ caller }) func getCattleByAgeRange(minAge : Nat, maxAge : Nat) : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray().filter(
+      func(r) { r.ageMonths >= minAge and r.ageMonths <= maxAge }
+    );
+  };
+
+  public query ({ caller }) func getCattleByMilkProductionRange(minLiters : Float, maxLiters : Float) : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray().filter(
+      func(r) { r.dailyMilkProductionLiters >= minLiters and r.dailyMilkProductionLiters <= maxLiters }
+    );
+  };
+
+  public query ({ caller }) func getCattleByPurchaseDateRange(startDate : Time.Time, endDate : Time.Time) : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray().filter(
+      func(r) { r.purchaseDate >= startDate and r.purchaseDate <= endDate }
     );
   };
 

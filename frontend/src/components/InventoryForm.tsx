@@ -3,147 +3,160 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import type { InventoryItem } from '../lib/localTypes';
 
-const CATEGORIES = ['Feed', 'Medicine', 'Equipment', 'Supplies', 'Other'];
-const UNITS = ['kg', 'liters', 'units', 'bags', 'bottles', 'boxes', 'packs'];
-
-interface AddInventoryFormProps {
-    mode: 'add';
-    onSubmit: (data: { name: string; category: string; quantity: number; unit: string }) => void;
-    onCancel: () => void;
-    isLoading?: boolean;
+interface InventoryFormAddProps {
+  mode: 'add';
+  onSubmit: (data: Omit<InventoryItem, 'id'>) => void;
+  item?: never;
 }
 
-interface UpdateInventoryFormProps {
-    mode: 'update';
-    itemName: string;
-    currentQuantity: number;
-    onSubmit: (data: { quantity: number }) => void;
-    onCancel: () => void;
-    isLoading?: boolean;
+interface InventoryFormUpdateProps {
+  mode: 'update';
+  item: InventoryItem;
+  onSubmit: (data: { quantity: number }) => void;
 }
 
-type InventoryFormProps = AddInventoryFormProps | UpdateInventoryFormProps;
+type InventoryFormProps = InventoryFormAddProps | InventoryFormUpdateProps;
+
+const CATEGORIES = ['Feed', 'Medicine', 'Supplies'];
+const UNITS = ['kg', 'liters', 'bales', 'vials', 'bottles', 'units', 'bags', 'boxes'];
 
 export default function InventoryForm(props: InventoryFormProps) {
-    const [name, setName] = useState('');
-    const [category, setCategory] = useState('Feed');
-    const [quantity, setQuantity] = useState(
-        props.mode === 'update' ? String(props.currentQuantity) : ''
-    );
-    const [unit, setUnit] = useState('kg');
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('Feed');
+  const [quantity, setQuantity] = useState(
+    props.mode === 'update' ? props.item.quantity.toString() : '',
+  );
+  const [unit, setUnit] = useState('kg');
+  const [lowStockThreshold, setLowStockThreshold] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const qty = parseInt(quantity, 10);
-        if (isNaN(qty) || qty < 0) return;
-
-        if (props.mode === 'add') {
-            if (!name.trim()) return;
-            props.onSubmit({ name: name.trim(), category, quantity: qty, unit });
-        } else {
-            props.onSubmit({ quantity: qty });
-        }
-    };
-
-    if (props.mode === 'update') {
-        return (
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                    Updating quantity for: <span className="font-semibold text-foreground">{props.itemName}</span>
-                </p>
-                <div className="space-y-1.5">
-                    <Label htmlFor="inv-quantity">New Quantity</Label>
-                    <Input
-                        id="inv-quantity"
-                        type="number"
-                        min="0"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        required
-                    />
-                </div>
-                <div className="flex gap-2 pt-2">
-                    <Button type="submit" disabled={props.isLoading} className="flex-1">
-                        {props.isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Update Quantity
-                    </Button>
-                    <Button type="button" variant="outline" onClick={props.onCancel} disabled={props.isLoading}>
-                        Cancel
-                    </Button>
-                </div>
-            </form>
-        );
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (props.mode === 'add') {
+      props.onSubmit({
+        name,
+        category,
+        quantity: parseFloat(quantity),
+        unit,
+        lowStockThreshold: parseFloat(lowStockThreshold) || 10,
+      });
+    } else {
+      props.onSubmit({ quantity: parseFloat(quantity) });
     }
+  };
 
+  if (props.mode === 'update') {
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-                <Label htmlFor="inv-name">Item Name</Label>
-                <Input
-                    id="inv-name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Hay Bales"
-                    required
-                />
-            </div>
-            <div className="space-y-1.5">
-                <Label htmlFor="inv-category">Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger id="inv-category">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {CATEGORIES.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                    <Label htmlFor="inv-quantity">Quantity</Label>
-                    <Input
-                        id="inv-quantity"
-                        type="number"
-                        min="0"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        placeholder="0"
-                        required
-                    />
-                </div>
-                <div className="space-y-1.5">
-                    <Label htmlFor="inv-unit">Unit</Label>
-                    <Select value={unit} onValueChange={setUnit}>
-                        <SelectTrigger id="inv-unit">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {UNITS.map((u) => (
-                                <SelectItem key={u} value={u}>{u}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-            <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={props.isLoading} className="flex-1">
-                    {props.isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Add Item
-                </Button>
-                <Button type="button" variant="outline" onClick={props.onCancel} disabled={props.isLoading}>
-                    Cancel
-                </Button>
-            </div>
-        </form>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Item</Label>
+          <p className="text-sm font-medium text-foreground">{props.item.name}</p>
+          <p className="text-xs text-muted-foreground">
+            Current: {props.item.quantity} {props.item.unit}
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="new-qty">New Quantity ({props.item.unit})</Label>
+          <Input
+            id="new-qty"
+            type="number"
+            step="0.1"
+            min="0"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            required
+          />
+        </div>
+        <Button type="submit" className="w-full">
+          Update Quantity
+        </Button>
+      </form>
     );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="item-name">Item Name</Label>
+        <Input
+          id="item-name"
+          placeholder="e.g. Cattle Feed"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Category</Label>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CATEGORIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="item-qty">Quantity</Label>
+          <Input
+            id="item-qty"
+            type="number"
+            step="0.1"
+            min="0"
+            placeholder="0"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Unit</Label>
+          <Select value={unit} onValueChange={setUnit}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {UNITS.map((u) => (
+                <SelectItem key={u} value={u}>
+                  {u}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="low-stock">Low Stock Threshold</Label>
+        <Input
+          id="low-stock"
+          type="number"
+          step="0.1"
+          min="0"
+          placeholder="e.g. 10"
+          value={lowStockThreshold}
+          onChange={(e) => setLowStockThreshold(e.target.value)}
+        />
+      </div>
+
+      <Button type="submit" className="w-full">
+        Add Item
+      </Button>
+    </form>
+  );
 }

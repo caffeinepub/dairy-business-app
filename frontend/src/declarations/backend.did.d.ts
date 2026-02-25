@@ -10,6 +10,17 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface Cattle {
+  'id' : bigint,
+  'purchaseCost' : number,
+  'purchaseDate' : Time,
+  'ageMonths' : bigint,
+  'activeStatus' : boolean,
+  'healthStatus' : HealthStatus,
+  'dailyMilkProductionLiters' : number,
+  'notes' : string,
+  'breed' : string,
+}
 export interface Customer {
   'id' : bigint,
   'name' : string,
@@ -27,19 +38,40 @@ export interface DeliveryRecord {
   'notes' : string,
   'customerId' : bigint,
 }
+export type HealthStatus = { 'recovered' : null } |
+  {
+    'sick' : {
+      'treatment' : string,
+      'medications' : Array<string>,
+      'condition' : string,
+    }
+  } |
+  { 'healthy' : null };
 export interface MilkProductionRecord {
   'id' : bigint,
   'date' : Time,
   'quantityLiters' : number,
   'notes' : string,
 }
+export interface MilkRecord {
+  'id' : bigint,
+  'date' : Time,
+  'cattleId' : bigint,
+  'quantityLiters' : number,
+  'notes' : string,
+}
 export type Time = bigint;
+export interface UserProfile { 'name' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
-  'addCustomer' : ActorMethod<[string, string, string, boolean], bigint>,
+  'addCattle' : ActorMethod<
+    [string, bigint, number, HealthStatus, Time, number, string],
+    bigint
+  >,
+  'addCustomer' : ActorMethod<[string, string, string], bigint>,
   'addDeliveryRecord' : ActorMethod<
     [
       bigint,
@@ -53,8 +85,23 @@ export interface _SERVICE {
     bigint
   >,
   'addMilkProductionRecord' : ActorMethod<[Time, number, string], bigint>,
+  'addMilkRecord' : ActorMethod<[bigint, Time, number, string], bigint>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'getAllCattle' : ActorMethod<[], Array<Cattle>>,
+  'getAllHealthyCattle' : ActorMethod<[], Array<Cattle>>,
+  'getAllMilkRecords' : ActorMethod<[], Array<MilkRecord>>,
+  'getAllRecoveredCattle' : ActorMethod<[], Array<Cattle>>,
+  'getAllSickCattle' : ActorMethod<[], Array<Cattle>>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getCattleByAgeRange' : ActorMethod<[bigint, bigint], Array<Cattle>>,
+  'getCattleByBreed' : ActorMethod<[string], Array<Cattle>>,
+  'getCattleByHealthStatus' : ActorMethod<[HealthStatus], Array<Cattle>>,
+  'getCattleByMilkProductionRange' : ActorMethod<
+    [number, number],
+    Array<Cattle>
+  >,
+  'getCattleByPurchaseDateRange' : ActorMethod<[Time, Time], Array<Cattle>>,
   'getCustomers' : ActorMethod<[], Array<Customer>>,
   'getDeliveryRecordsByCustomer' : ActorMethod<[bigint], Array<DeliveryRecord>>,
   'getDeliveryRecordsByDate' : ActorMethod<[Time], Array<DeliveryRecord>>,
@@ -63,15 +110,20 @@ export interface _SERVICE {
     Array<DeliveryRecord>
   >,
   'getMilkProductionRecords' : ActorMethod<[], Array<MilkProductionRecord>>,
+  'getMilkRecordsByCattle' : ActorMethod<[bigint], Array<MilkRecord>>,
+  'getMilkRecordsByDateRange' : ActorMethod<[Time, Time], Array<MilkRecord>>,
   'getMilkRecordsByMonth' : ActorMethod<
     [bigint, bigint],
     Array<MilkProductionRecord>
   >,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'updateCustomer' : ActorMethod<
-    [bigint, string, string, string, boolean],
+  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'updateCattle' : ActorMethod<
+    [bigint, string, bigint, number, HealthStatus, Time, number, string],
     undefined
   >,
+  'updateCustomer' : ActorMethod<[bigint, string, string, string], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

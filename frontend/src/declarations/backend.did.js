@@ -8,12 +8,40 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const HealthStatus = IDL.Variant({
+  'recovered' : IDL.Null,
+  'sick' : IDL.Record({
+    'treatment' : IDL.Text,
+    'medications' : IDL.Vec(IDL.Text),
+    'condition' : IDL.Text,
+  }),
+  'healthy' : IDL.Null,
+});
 export const Time = IDL.Int;
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const Cattle = IDL.Record({
+  'id' : IDL.Nat,
+  'purchaseCost' : IDL.Float64,
+  'purchaseDate' : Time,
+  'ageMonths' : IDL.Nat,
+  'activeStatus' : IDL.Bool,
+  'healthStatus' : HealthStatus,
+  'dailyMilkProductionLiters' : IDL.Float64,
+  'notes' : IDL.Text,
+  'breed' : IDL.Text,
+});
+export const MilkRecord = IDL.Record({
+  'id' : IDL.Nat,
+  'date' : Time,
+  'cattleId' : IDL.Nat,
+  'quantityLiters' : IDL.Float64,
+  'notes' : IDL.Text,
+});
+export const UserProfile = IDL.Record({ 'name' : IDL.Text });
 export const Customer = IDL.Record({
   'id' : IDL.Nat,
   'name' : IDL.Text,
@@ -39,11 +67,20 @@ export const MilkProductionRecord = IDL.Record({
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-  'addCustomer' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
+  'addCattle' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Nat,
+        IDL.Float64,
+        HealthStatus,
+        Time,
+        IDL.Float64,
+        IDL.Text,
+      ],
       [IDL.Nat],
       [],
     ),
+  'addCustomer' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Nat], []),
   'addDeliveryRecord' : IDL.Func(
       [
         IDL.Nat,
@@ -61,8 +98,40 @@ export const idlService = IDL.Service({
       [IDL.Nat],
       [],
     ),
+  'addMilkRecord' : IDL.Func(
+      [IDL.Nat, Time, IDL.Float64, IDL.Text],
+      [IDL.Nat],
+      [],
+    ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'getAllCattle' : IDL.Func([], [IDL.Vec(Cattle)], ['query']),
+  'getAllHealthyCattle' : IDL.Func([], [IDL.Vec(Cattle)], ['query']),
+  'getAllMilkRecords' : IDL.Func([], [IDL.Vec(MilkRecord)], ['query']),
+  'getAllRecoveredCattle' : IDL.Func([], [IDL.Vec(Cattle)], ['query']),
+  'getAllSickCattle' : IDL.Func([], [IDL.Vec(Cattle)], ['query']),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getCattleByAgeRange' : IDL.Func(
+      [IDL.Nat, IDL.Nat],
+      [IDL.Vec(Cattle)],
+      ['query'],
+    ),
+  'getCattleByBreed' : IDL.Func([IDL.Text], [IDL.Vec(Cattle)], ['query']),
+  'getCattleByHealthStatus' : IDL.Func(
+      [HealthStatus],
+      [IDL.Vec(Cattle)],
+      ['query'],
+    ),
+  'getCattleByMilkProductionRange' : IDL.Func(
+      [IDL.Float64, IDL.Float64],
+      [IDL.Vec(Cattle)],
+      ['query'],
+    ),
+  'getCattleByPurchaseDateRange' : IDL.Func(
+      [Time, Time],
+      [IDL.Vec(Cattle)],
+      ['query'],
+    ),
   'getCustomers' : IDL.Func([], [IDL.Vec(Customer)], ['query']),
   'getDeliveryRecordsByCustomer' : IDL.Func(
       [IDL.Nat],
@@ -84,28 +153,82 @@ export const idlService = IDL.Service({
       [IDL.Vec(MilkProductionRecord)],
       ['query'],
     ),
+  'getMilkRecordsByCattle' : IDL.Func(
+      [IDL.Nat],
+      [IDL.Vec(MilkRecord)],
+      ['query'],
+    ),
+  'getMilkRecordsByDateRange' : IDL.Func(
+      [Time, Time],
+      [IDL.Vec(MilkRecord)],
+      ['query'],
+    ),
   'getMilkRecordsByMonth' : IDL.Func(
       [IDL.Nat, IDL.Nat],
       [IDL.Vec(MilkProductionRecord)],
       ['query'],
     ),
+  'getUserProfile' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(UserProfile)],
+      ['query'],
+    ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'updateCustomer' : IDL.Func(
-      [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
+  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'updateCattle' : IDL.Func(
+      [
+        IDL.Nat,
+        IDL.Text,
+        IDL.Nat,
+        IDL.Float64,
+        HealthStatus,
+        Time,
+        IDL.Float64,
+        IDL.Text,
+      ],
       [],
       [],
     ),
+  'updateCustomer' : IDL.Func([IDL.Nat, IDL.Text, IDL.Text, IDL.Text], [], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const HealthStatus = IDL.Variant({
+    'recovered' : IDL.Null,
+    'sick' : IDL.Record({
+      'treatment' : IDL.Text,
+      'medications' : IDL.Vec(IDL.Text),
+      'condition' : IDL.Text,
+    }),
+    'healthy' : IDL.Null,
+  });
   const Time = IDL.Int;
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
+  const Cattle = IDL.Record({
+    'id' : IDL.Nat,
+    'purchaseCost' : IDL.Float64,
+    'purchaseDate' : Time,
+    'ageMonths' : IDL.Nat,
+    'activeStatus' : IDL.Bool,
+    'healthStatus' : HealthStatus,
+    'dailyMilkProductionLiters' : IDL.Float64,
+    'notes' : IDL.Text,
+    'breed' : IDL.Text,
+  });
+  const MilkRecord = IDL.Record({
+    'id' : IDL.Nat,
+    'date' : Time,
+    'cattleId' : IDL.Nat,
+    'quantityLiters' : IDL.Float64,
+    'notes' : IDL.Text,
+  });
+  const UserProfile = IDL.Record({ 'name' : IDL.Text });
   const Customer = IDL.Record({
     'id' : IDL.Nat,
     'name' : IDL.Text,
@@ -131,11 +254,20 @@ export const idlFactory = ({ IDL }) => {
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-    'addCustomer' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
+    'addCattle' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Nat,
+          IDL.Float64,
+          HealthStatus,
+          Time,
+          IDL.Float64,
+          IDL.Text,
+        ],
         [IDL.Nat],
         [],
       ),
+    'addCustomer' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Nat], []),
     'addDeliveryRecord' : IDL.Func(
         [
           IDL.Nat,
@@ -153,8 +285,40 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Nat],
         [],
       ),
+    'addMilkRecord' : IDL.Func(
+        [IDL.Nat, Time, IDL.Float64, IDL.Text],
+        [IDL.Nat],
+        [],
+      ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'getAllCattle' : IDL.Func([], [IDL.Vec(Cattle)], ['query']),
+    'getAllHealthyCattle' : IDL.Func([], [IDL.Vec(Cattle)], ['query']),
+    'getAllMilkRecords' : IDL.Func([], [IDL.Vec(MilkRecord)], ['query']),
+    'getAllRecoveredCattle' : IDL.Func([], [IDL.Vec(Cattle)], ['query']),
+    'getAllSickCattle' : IDL.Func([], [IDL.Vec(Cattle)], ['query']),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getCattleByAgeRange' : IDL.Func(
+        [IDL.Nat, IDL.Nat],
+        [IDL.Vec(Cattle)],
+        ['query'],
+      ),
+    'getCattleByBreed' : IDL.Func([IDL.Text], [IDL.Vec(Cattle)], ['query']),
+    'getCattleByHealthStatus' : IDL.Func(
+        [HealthStatus],
+        [IDL.Vec(Cattle)],
+        ['query'],
+      ),
+    'getCattleByMilkProductionRange' : IDL.Func(
+        [IDL.Float64, IDL.Float64],
+        [IDL.Vec(Cattle)],
+        ['query'],
+      ),
+    'getCattleByPurchaseDateRange' : IDL.Func(
+        [Time, Time],
+        [IDL.Vec(Cattle)],
+        ['query'],
+      ),
     'getCustomers' : IDL.Func([], [IDL.Vec(Customer)], ['query']),
     'getDeliveryRecordsByCustomer' : IDL.Func(
         [IDL.Nat],
@@ -176,14 +340,44 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(MilkProductionRecord)],
         ['query'],
       ),
+    'getMilkRecordsByCattle' : IDL.Func(
+        [IDL.Nat],
+        [IDL.Vec(MilkRecord)],
+        ['query'],
+      ),
+    'getMilkRecordsByDateRange' : IDL.Func(
+        [Time, Time],
+        [IDL.Vec(MilkRecord)],
+        ['query'],
+      ),
     'getMilkRecordsByMonth' : IDL.Func(
         [IDL.Nat, IDL.Nat],
         [IDL.Vec(MilkProductionRecord)],
         ['query'],
       ),
+    'getUserProfile' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(UserProfile)],
+        ['query'],
+      ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'updateCattle' : IDL.Func(
+        [
+          IDL.Nat,
+          IDL.Text,
+          IDL.Nat,
+          IDL.Float64,
+          HealthStatus,
+          Time,
+          IDL.Float64,
+          IDL.Text,
+        ],
+        [],
+        [],
+      ),
     'updateCustomer' : IDL.Func(
-        [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
+        [IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
         [],
         [],
       ),
