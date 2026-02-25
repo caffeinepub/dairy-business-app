@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T14:48:39.648Z",
+  "generatedAt": "2026-02-25T15:42:36.064Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -12,13 +12,15 @@
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Restore the logo in the Layout component (frontend/src/components/Layout.tsx) to its original appearance as it was before Version 16. Inspect the current logo markup and revert any unintended changes to the logo image source, size, styling, or text that were introduced during the recent deployment.",
+        "summary": "Add a 'Download CSV' button to the Milk Production page that exports all currently displayed (filtered) milk production records as a CSV file. The CSV should include columns for Date, Cattle ID/Name, Quantity (Liters), and any other relevant fields already shown in the records table.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/Layout.tsx"
+          "frontend/src/utils/csvExport.ts",
+          "frontend/src/pages/MilkProduction.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/Layout.tsx"
+          "frontend/src/utils/csvExport.ts",
+          "frontend/src/pages/MilkProduction.tsx"
         ]
       }
     ]
@@ -28,7 +30,8 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/Layout.tsx",
+    "frontend/src/pages/MilkProduction.tsx",
+    "frontend/src/utils/csvExport.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Truck, Plus, Filter, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,6 @@ import {
   useGetCustomers,
   useGetDeliveryRecordsByDate,
   useAddDeliveryRecord,
-  nanosecondsToDate,
-  dateToNanoseconds,
 } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import WhatsAppMessageModal from '../components/WhatsAppMessageModal';
@@ -42,7 +40,7 @@ export default function DeliveryReports() {
 
   const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0]);
   const { data: deliveries = [], isLoading } = useGetDeliveryRecordsByDate(
-    filterDate ? new Date(filterDate) : null,
+    new Date(filterDate || new Date().toISOString().split('T')[0]),
   );
 
   // Form state
@@ -67,7 +65,7 @@ export default function DeliveryReports() {
     await addDeliveryRecord.mutateAsync({
       customerId: BigInt(formCustomerId),
       deliveryBoyName: formDeliveryBoy,
-      date: dateToNanoseconds(new Date(formDate)),
+      date: new Date(formDate),
       quantityLiters: parseFloat(formQty),
       status:
         formStatus === 'delivered'

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Droplets, Plus, Filter } from 'lucide-react';
+import { Droplets, Plus, Filter, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,7 @@ import {
 } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import MilkProductionChart from '../components/MilkProductionChart';
+import { exportMilkProductionRecordsToCSV } from '../utils/csvExport';
 import type { MilkRecord } from '../backend';
 
 export default function MilkProduction() {
@@ -77,6 +78,10 @@ export default function MilkProduction() {
   }, [milkRecords, filterStart, filterEnd]);
 
   const totalLiters = filteredRecords.reduce((sum, r) => sum + r.quantityLiters, 0);
+
+  const handleDownloadCSV = () => {
+    exportMilkProductionRecordsToCSV(filteredRecords, cattle);
+  };
 
   return (
     <div className="space-y-6">
@@ -199,6 +204,16 @@ export default function MilkProduction() {
                 className="w-36 h-8 text-sm"
                 placeholder="To"
               />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadCSV}
+                disabled={filteredRecords.length === 0}
+                className="flex items-center gap-1.5 h-8"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download CSV
+              </Button>
             </div>
           </div>
         </CardHeader>

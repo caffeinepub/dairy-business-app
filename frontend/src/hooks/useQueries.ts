@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import type { Cattle, Customer, DeliveryRecord, MilkRecord, MilkProductionRecord, HealthStatus, UserProfile } from '../backend';
-import { Variant_missed_delivered } from '../backend';
+import { CattleStatus, Variant_missed_delivered } from '../backend';
 
 // ─── Time Utilities ───────────────────────────────────────────────────────────
 
@@ -84,6 +84,7 @@ export function useAddCattle() {
       purchaseDate: bigint;
       purchaseCost: number;
       notes: string;
+      status: CattleStatus;
     }) => {
       if (!actor) throw new Error('Actor not available');
       return actor.addCattle(
@@ -94,6 +95,7 @@ export function useAddCattle() {
         params.purchaseDate,
         params.purchaseCost,
         params.notes,
+        params.status,
       );
     },
     onSuccess: () => {
@@ -116,6 +118,7 @@ export function useUpdateCattle() {
       purchaseDate: bigint;
       purchaseCost: number;
       notes: string;
+      status: CattleStatus;
     }) => {
       if (!actor) throw new Error('Actor not available');
       return actor.updateCattle(
@@ -127,6 +130,7 @@ export function useUpdateCattle() {
         params.purchaseDate,
         params.purchaseCost,
         params.notes,
+        params.status,
       );
     },
     onSuccess: () => {
@@ -228,9 +232,10 @@ export function useAddCustomer() {
       name: string;
       address: string;
       phone: string;
+      active: boolean;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.addCustomer(params.name, params.address, params.phone);
+      return actor.addCustomer(params.name, params.address, params.phone, params.active);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -248,9 +253,16 @@ export function useUpdateCustomer() {
       name: string;
       address: string;
       phone: string;
+      active: boolean;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.updateCustomer(params.customerId, params.name, params.address, params.phone);
+      return actor.updateCustomer(
+        params.customerId,
+        params.name,
+        params.address,
+        params.phone,
+        params.active,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -260,16 +272,29 @@ export function useUpdateCustomer() {
 
 // ─── Delivery Records ─────────────────────────────────────────────────────────
 
-export function useGetDeliveryRecordsByDate(date: Date | null) {
+export function useGetDeliveryRecordsByDate(date: Date) {
   const { actor, isFetching } = useActor();
 
   return useQuery<DeliveryRecord[]>({
-    queryKey: ['deliveries', 'date', date?.toISOString()],
+    queryKey: ['deliveryRecords', 'date', date.toDateString()],
     queryFn: async () => {
-      if (!actor || !date) return [];
+      if (!actor) return [];
       return actor.getDeliveryRecordsByDate(dateToNanoseconds(date));
     },
-    enabled: !!actor && !isFetching && !!date,
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useGetDeliveryRecordsByCustomer(customerId: bigint | null) {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<DeliveryRecord[]>({
+    queryKey: ['deliveryRecords', 'customer', customerId?.toString()],
+    queryFn: async () => {
+      if (!actor || customerId === null) return [];
+      return actor.getDeliveryRecordsByCustomer(customerId);
+    },
+    enabled: !!actor && !isFetching && customerId !== null,
   });
 }
 
@@ -277,7 +302,7 @@ export function useGetDeliveryRecordsByMonth(month: number, year: number) {
   const { actor, isFetching } = useActor();
 
   return useQuery<DeliveryRecord[]>({
-    queryKey: ['deliveries', 'month', month, year],
+    queryKey: ['deliveryRecords', 'month', month, year],
     queryFn: async () => {
       if (!actor) return [];
       return actor.getDeliveryRecordsByMonth(BigInt(month), BigInt(year));
@@ -294,7 +319,7 @@ export function useAddDeliveryRecord() {
     mutationFn: async (params: {
       customerId: bigint;
       deliveryBoyName: string;
-      date: bigint;
+      date: Date;
       quantityLiters: number;
       status: Variant_missed_delivered;
       notes: string;
@@ -303,19 +328,19 @@ export function useAddDeliveryRecord() {
       return actor.addDeliveryRecord(
         params.customerId,
         params.deliveryBoyName,
-        params.date,
+        dateToNanoseconds(params.date),
         params.quantityLiters,
         params.status,
         params.notes,
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deliveries'] });
+      queryClient.invalidateQueries({ queryKey: ['deliveryRecords'] });
     },
   });
 }
 
-// ─── Milk Production Records (farm-level) ─────────────────────────────────────
+// ─── Milk Production Records ──────────────────────────────────────────────────
 
 export function useGetMilkProductionRecords() {
   const { actor, isFetching } = useActor();
@@ -330,6 +355,29 @@ export function useGetMilkProductionRecords() {
   });
 }
 
+export function useAddMilkProductionRecord() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      date: Date;
+      quantityLiters: number;
+      notes: string;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.addMilkProductionRecord(
+        dateToNanoseconds(params.date),
+        params.quantityLiters,
+        params.notes,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['milkProductionRecords'] });
+    },
+  });
+}
+
 export function useGetMilkRecordsByMonth(month: number, year: number) {
   const { actor, isFetching } = useActor();
 
@@ -340,24 +388,5 @@ export function useGetMilkRecordsByMonth(month: number, year: number) {
       return actor.getMilkRecordsByMonth(BigInt(month), BigInt(year));
     },
     enabled: !!actor && !isFetching,
-  });
-}
-
-export function useAddMilkProductionRecord() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      date: bigint;
-      quantityLiters: number;
-      notes: string;
-    }) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.addMilkProductionRecord(params.date, params.quantityLiters, params.notes);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['milkProductionRecords'] });
-    },
   });
 }

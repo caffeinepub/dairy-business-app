@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Plus, Edit2, ToggleLeft, ToggleRight, Beef } from 'lucide-react';
+import { AlertTriangle, Plus, Edit2, Beef } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ import { useGetAllCattle, useAddCattle, useUpdateCattle, nanosecondsToDate } fro
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import CattleForm from '../components/CattleForm';
 import type { Cattle } from '../backend';
+import { CattleStatus } from '../backend';
 import { toast } from 'sonner';
 
 export default function CattleManagement() {
@@ -36,13 +37,30 @@ export default function CattleManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCattle, setEditingCattle] = useState<Cattle | null>(null);
 
-  const activeCattle = cattle.filter((c) => c.activeStatus);
+  const activeCattle = cattle.filter((c) => c.status === CattleStatus.active);
   const healthyCattle = cattle.filter((c) => c.healthStatus.__kind__ === 'healthy');
   const sickCattle = cattle.filter((c) => c.healthStatus.__kind__ === 'sick');
 
   const handleEditOpen = (c: Cattle) => {
     setEditingCattle(c);
     setEditDialogOpen(true);
+  };
+
+  const handleAddDialogChange = (open: boolean) => {
+    // Only allow closing if not currently submitting
+    if (!open && addCattleMutation.isPending) return;
+    if (!open) addCattleMutation.reset();
+    setAddDialogOpen(open);
+  };
+
+  const handleEditDialogChange = (open: boolean) => {
+    // Only allow closing if not currently submitting
+    if (!open && updateCattleMutation.isPending) return;
+    if (!open) {
+      updateCattleMutation.reset();
+      setEditingCattle(null);
+    }
+    setEditDialogOpen(open);
   };
 
   const getHealthBadge = (c: Cattle) => {
@@ -55,6 +73,15 @@ export default function CattleManagement() {
     return <Badge variant="secondary">Recovered</Badge>;
   };
 
+  const getStatusBadge = (c: Cattle) => {
+    const isActive = c.status === CattleStatus.active;
+    return (
+      <Badge variant={isActive ? 'default' : 'secondary'}>
+        {isActive ? 'Active' : 'Inactive'}
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -65,9 +92,9 @@ export default function CattleManagement() {
           </p>
         </div>
         {isAuthenticated && (
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <Dialog open={addDialogOpen} onOpenChange={handleAddDialogChange}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={() => setAddDialogOpen(true)}>
                 <Plus className="w-4 h-4" />
                 Add Cattle
               </Button>
@@ -87,9 +114,11 @@ export default function CattleManagement() {
                       purchaseDate: data.purchaseDate,
                       purchaseCost: data.purchaseCost,
                       notes: data.notes,
+                      status: data.status,
                     });
                     toast.success('Cattle added successfully!');
                     setAddDialogOpen(false);
+                    addCattleMutation.reset();
                   } catch (err) {
                     toast.error('Failed to add cattle. Please try again.');
                   }
@@ -168,11 +197,7 @@ export default function CattleManagement() {
                       <TableCell className="text-sm text-muted-foreground">
                         {nanosecondsToDate(c.purchaseDate).toLocaleDateString()}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={c.activeStatus ? 'default' : 'secondary'}>
-                          {c.activeStatus ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
+                      <TableCell>{getStatusBadge(c)}</TableCell>
                       {isAuthenticated && (
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -197,7 +222,7 @@ export default function CattleManagement() {
       </Card>
 
       {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog open={editDialogOpen} onOpenChange={handleEditDialogChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Cattle</DialogTitle>
@@ -216,10 +241,12 @@ export default function CattleManagement() {
                     purchaseDate: data.purchaseDate,
                     purchaseCost: data.purchaseCost,
                     notes: data.notes,
+                    status: data.status,
                   });
                   toast.success('Cattle updated successfully!');
                   setEditDialogOpen(false);
                   setEditingCattle(null);
+                  updateCattleMutation.reset();
                 } catch (err) {
                   toast.error('Failed to update cattle. Please try again.');
                 }

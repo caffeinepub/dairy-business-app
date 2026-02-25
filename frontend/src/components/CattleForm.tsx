@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { Loader2 } from 'lucide-react';
 import type { Cattle, HealthStatus } from '../backend';
+import { CattleStatus } from '../backend';
 import { dateToNanoseconds, nanosecondsToDate } from '../hooks/useQueries';
 
 interface CattleFormProps {
@@ -24,7 +25,7 @@ interface CattleFormProps {
     purchaseDate: bigint;
     purchaseCost: number;
     notes: string;
-    activeStatus: boolean;
+    status: CattleStatus;
   }) => Promise<void>;
   isLoading?: boolean;
 }
@@ -62,7 +63,13 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
     initialValues ? initialValues.purchaseCost.toString() : '',
   );
   const [notes, setNotes] = useState(initialValues?.notes ?? '');
-  const [activeStatus, setActiveStatus] = useState(initialValues?.activeStatus ?? true);
+  // Use the CattleStatus enum from backend; default to active for new records
+  const [status, setStatus] = useState<CattleStatus>(
+    initialValues?.status ?? CattleStatus.active,
+  );
+
+  // Guard against double-submission
+  const isSubmittingRef = useRef(false);
 
   const buildHealthStatus = (): HealthStatus => {
     if (healthStatus === 'sick') {
@@ -83,17 +90,28 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit({
-      breed,
-      ageMonths: BigInt(ageMonths),
-      dailyMilkProductionLiters: parseFloat(dailyMilk),
-      healthStatus: buildHealthStatus(),
-      purchaseDate: dateToNanoseconds(new Date(purchaseDate)),
-      purchaseCost: parseFloat(purchaseCost),
-      notes,
-      activeStatus,
-    });
+
+    // Prevent concurrent submissions
+    if (isSubmittingRef.current || isLoading) return;
+    isSubmittingRef.current = true;
+
+    try {
+      await onSubmit({
+        breed,
+        ageMonths: BigInt(ageMonths),
+        dailyMilkProductionLiters: parseFloat(dailyMilk),
+        healthStatus: buildHealthStatus(),
+        purchaseDate: dateToNanoseconds(new Date(purchaseDate)),
+        purchaseCost: parseFloat(purchaseCost),
+        notes,
+        status,
+      });
+    } finally {
+      isSubmittingRef.current = false;
+    }
   };
+
+  const disabled = isLoading || false;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,6 +123,7 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
           value={breed}
           onChange={(e) => setBreed(e.target.value)}
           required
+          disabled={disabled}
         />
       </div>
 
@@ -119,6 +138,7 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
             value={ageMonths}
             onChange={(e) => setAgeMonths(e.target.value)}
             required
+            disabled={disabled}
           />
         </div>
         <div className="space-y-1.5">
@@ -132,6 +152,7 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
             value={dailyMilk}
             onChange={(e) => setDailyMilk(e.target.value)}
             required
+            disabled={disabled}
           />
         </div>
       </div>
@@ -141,6 +162,7 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
         <Select
           value={healthStatus}
           onValueChange={(v) => setHealthStatus(v as 'healthy' | 'sick' | 'recovered')}
+          disabled={disabled}
         >
           <SelectTrigger>
             <SelectValue />
@@ -161,6 +183,7 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
               placeholder="e.g. Mastitis"
               value={sickCondition}
               onChange={(e) => setSickCondition(e.target.value)}
+              disabled={disabled}
             />
           </div>
           <div className="space-y-1.5">
@@ -169,6 +192,7 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
               placeholder="e.g. Antibiotics"
               value={sickTreatment}
               onChange={(e) => setSickTreatment(e.target.value)}
+              disabled={disabled}
             />
           </div>
         </div>
@@ -183,6 +207,7 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
             value={purchaseDate}
             onChange={(e) => setPurchaseDate(e.target.value)}
             required
+            disabled={disabled}
           />
         </div>
         <div className="space-y-1.5">
@@ -196,8 +221,26 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
             value={purchaseCost}
             onChange={(e) => setPurchaseCost(e.target.value)}
             required
+            disabled={disabled}
           />
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Cattle Status</Label>
+        <Select
+          value={status}
+          onValueChange={(v) => setStatus(v as CattleStatus)}
+          disabled={disabled}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={CattleStatus.active}>Active</SelectItem>
+            <SelectItem value={CattleStatus.inactive}>Inactive</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-1.5">
@@ -208,22 +251,21 @@ export default function CattleForm({ initialValues, onSubmit, isLoading }: Cattl
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
+          disabled={disabled}
         />
       </div>
 
-      {initialValues && (
-        <div className="flex items-center gap-3">
-          <Switch
-            id="active-status"
-            checked={activeStatus}
-            onCheckedChange={setActiveStatus}
-          />
-          <Label htmlFor="active-status">Active</Label>
-        </div>
-      )}
-
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Saving…' : initialValues ? 'Update Cattle' : 'Add Cattle'}
+      <Button type="submit" className="w-full" disabled={disabled}>
+        {isLoading ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Saving…
+          </>
+        ) : initialValues ? (
+          'Update Cattle'
+        ) : (
+          'Add Cattle'
+        )}
       </Button>
     </form>
   );

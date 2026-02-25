@@ -1,21 +1,30 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Restore original logo in Layout header",
+  "title": "Add CSV download/export for Milk Production Tracker",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Restore the logo in the Layout component header to its original appearance before Version 16 by reverting unintended changes to the logo image source, size, styling, or text",
+      "summary": "Add CSV export functionality to the Milk Production page that downloads all currently displayed (filtered) milk production records",
       "acceptanceCriteria": [
-        "The logo displayed in the sticky header matches the original logo design prior to Version 16 changes.",
-        "No other header or navigation elements are affected by the fix.",
-        "The logo renders correctly on both desktop and mobile layouts."
+        "A 'Download CSV' button is visible on the MilkProduction page, near the records table or filter controls.",
+        "Clicking the button triggers a browser file download of a .csv file.",
+        "The CSV file contains a header row and one row per milk production record currently shown in the table.",
+        "Exported columns include at minimum: Date, Cattle ID or Name, Milk Quantity (Liters).",
+        "If filters are applied (e.g., date range, cattle selection), only the filtered records are exported.",
+        "The exported filename is descriptive, e.g., milk-production-YYYY-MM-DD.csv.",
+        "The button is disabled or shows a message when there are no records to export."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/Layout.tsx",
+          "path": "frontend/src/utils/csvExport.ts",
           "operation": "modify",
-          "description": "Inspect the current logo markup in the sticky header and revert any unintended changes to the logo image source (verify correct asset path from frontend/public/assets/generated/dairy-logo.dim_200x60.png or frontend/public/assets/generated/ao-farms-logo.dim_320x160.png), size attributes, styling classes, or accompanying text that were introduced in Version 16. Ensure the logo uses the correct original asset and styling without altering navigation links or other Layout functionality."
+          "description": "Add a new exportMilkProductionRecordsToCSV function that accepts an array of MilkRecord objects (with cattle data joined) and generates a CSV file with columns for Date, Cattle ID, Cattle Breed/Name (if available), Quantity (Liters), and Notes. Follow the existing pattern used in the current CSV export utility, formatting the date appropriately and handling the nanosecond-to-Date conversion. The function should trigger a browser download with a filename like 'milk-production-YYYY-MM-DD.csv'."
+        },
+        {
+          "path": "frontend/src/pages/MilkProduction.tsx",
+          "operation": "modify",
+          "description": "Add a 'Download CSV' button near the table or filter controls that calls the new exportMilkProductionRecordsToCSV function. The button should be disabled when filteredRecords is empty. Enhance the filtered records data by joining with cattle information (breed/ID) from the getAllCattle query before passing to the CSV export function, ensuring the exported CSV includes readable cattle identifiers. Position the button in the UI near the existing filter controls for easy discoverability."
         }
       ]
     }

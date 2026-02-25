@@ -17,7 +17,7 @@ import { useGetDeliveryRecordsByDate } from '../hooks/useQueries';
 import { nanosecondsToDate, getTodayNanoseconds } from '../hooks/useQueries';
 import MilkProductionChart from '../components/MilkProductionChart';
 import type { MilkRecord } from '../backend';
-import { Variant_missed_delivered } from '../backend';
+import { CattleStatus, Variant_missed_delivered } from '../backend';
 
 export default function Dashboard() {
   const today = useMemo(() => new Date(), []);
@@ -25,7 +25,7 @@ export default function Dashboard() {
   const { data: milkRecords = [] } = useGetAllMilkRecords();
   const { data: todayDeliveries = [] } = useGetDeliveryRecordsByDate(today);
 
-  const activeCattle = cattle.filter((c) => c.activeStatus).length;
+  const activeCattle = cattle.filter((c) => c.status === CattleStatus.active).length;
 
   const todayNs = getTodayNanoseconds();
   const tomorrowNs = todayNs + 86_400_000_000_000n;

@@ -18,6 +18,10 @@ export const HealthStatus = IDL.Variant({
   'healthy' : IDL.Null,
 });
 export const Time = IDL.Int;
+export const CattleStatus = IDL.Variant({
+  'active' : IDL.Null,
+  'inactive' : IDL.Null,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -25,10 +29,10 @@ export const UserRole = IDL.Variant({
 });
 export const Cattle = IDL.Record({
   'id' : IDL.Nat,
+  'status' : CattleStatus,
   'purchaseCost' : IDL.Float64,
   'purchaseDate' : Time,
   'ageMonths' : IDL.Nat,
-  'activeStatus' : IDL.Bool,
   'healthStatus' : HealthStatus,
   'dailyMilkProductionLiters' : IDL.Float64,
   'notes' : IDL.Text,
@@ -44,8 +48,8 @@ export const MilkRecord = IDL.Record({
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
 export const Customer = IDL.Record({
   'id' : IDL.Nat,
+  'active' : IDL.Bool,
   'name' : IDL.Text,
-  'activeStatus' : IDL.Bool,
   'address' : IDL.Text,
   'phone' : IDL.Text,
 });
@@ -76,11 +80,16 @@ export const idlService = IDL.Service({
         Time,
         IDL.Float64,
         IDL.Text,
+        CattleStatus,
       ],
-      [IDL.Nat],
+      [IDL.Opt(IDL.Nat)],
       [],
     ),
-  'addCustomer' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Nat], []),
+  'addCustomer' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
+      [IDL.Opt(IDL.Nat)],
+      [],
+    ),
   'addDeliveryRecord' : IDL.Func(
       [
         IDL.Nat,
@@ -132,6 +141,7 @@ export const idlService = IDL.Service({
       [IDL.Vec(Cattle)],
       ['query'],
     ),
+  'getCattleByStatus' : IDL.Func([CattleStatus], [IDL.Vec(Cattle)], ['query']),
   'getCustomers' : IDL.Func([], [IDL.Vec(Customer)], ['query']),
   'getDeliveryRecordsByCustomer' : IDL.Func(
       [IDL.Nat],
@@ -185,11 +195,16 @@ export const idlService = IDL.Service({
         Time,
         IDL.Float64,
         IDL.Text,
+        CattleStatus,
       ],
       [],
       [],
     ),
-  'updateCustomer' : IDL.Func([IDL.Nat, IDL.Text, IDL.Text, IDL.Text], [], []),
+  'updateCustomer' : IDL.Func(
+      [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
+      [],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
@@ -205,6 +220,10 @@ export const idlFactory = ({ IDL }) => {
     'healthy' : IDL.Null,
   });
   const Time = IDL.Int;
+  const CattleStatus = IDL.Variant({
+    'active' : IDL.Null,
+    'inactive' : IDL.Null,
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -212,10 +231,10 @@ export const idlFactory = ({ IDL }) => {
   });
   const Cattle = IDL.Record({
     'id' : IDL.Nat,
+    'status' : CattleStatus,
     'purchaseCost' : IDL.Float64,
     'purchaseDate' : Time,
     'ageMonths' : IDL.Nat,
-    'activeStatus' : IDL.Bool,
     'healthStatus' : HealthStatus,
     'dailyMilkProductionLiters' : IDL.Float64,
     'notes' : IDL.Text,
@@ -231,8 +250,8 @@ export const idlFactory = ({ IDL }) => {
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
   const Customer = IDL.Record({
     'id' : IDL.Nat,
+    'active' : IDL.Bool,
     'name' : IDL.Text,
-    'activeStatus' : IDL.Bool,
     'address' : IDL.Text,
     'phone' : IDL.Text,
   });
@@ -263,11 +282,16 @@ export const idlFactory = ({ IDL }) => {
           Time,
           IDL.Float64,
           IDL.Text,
+          CattleStatus,
         ],
-        [IDL.Nat],
+        [IDL.Opt(IDL.Nat)],
         [],
       ),
-    'addCustomer' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Nat], []),
+    'addCustomer' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
+        [IDL.Opt(IDL.Nat)],
+        [],
+      ),
     'addDeliveryRecord' : IDL.Func(
         [
           IDL.Nat,
@@ -316,6 +340,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getCattleByPurchaseDateRange' : IDL.Func(
         [Time, Time],
+        [IDL.Vec(Cattle)],
+        ['query'],
+      ),
+    'getCattleByStatus' : IDL.Func(
+        [CattleStatus],
         [IDL.Vec(Cattle)],
         ['query'],
       ),
@@ -372,12 +401,13 @@ export const idlFactory = ({ IDL }) => {
           Time,
           IDL.Float64,
           IDL.Text,
+          CattleStatus,
         ],
         [],
         [],
       ),
     'updateCustomer' : IDL.Func(
-        [IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
         [],
         [],
       ),

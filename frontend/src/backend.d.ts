@@ -26,10 +26,10 @@ export interface DeliveryRecord {
 export type Time = bigint;
 export interface Cattle {
     id: bigint;
+    status: CattleStatus;
     purchaseCost: number;
     purchaseDate: Time;
     ageMonths: bigint;
-    activeStatus: boolean;
     healthStatus: HealthStatus;
     dailyMilkProductionLiters: number;
     notes: string;
@@ -51,8 +51,8 @@ export type HealthStatus = {
 };
 export interface Customer {
     id: bigint;
+    active: boolean;
     name: string;
-    activeStatus: boolean;
     address: string;
     phone: string;
 }
@@ -65,6 +65,10 @@ export interface MilkProductionRecord {
     quantityLiters: number;
     notes: string;
 }
+export enum CattleStatus {
+    active = "active",
+    inactive = "inactive"
+}
 export enum UserRole {
     admin = "admin",
     user = "user",
@@ -75,8 +79,8 @@ export enum Variant_missed_delivered {
     delivered = "delivered"
 }
 export interface backendInterface {
-    addCattle(breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string): Promise<bigint>;
-    addCustomer(name: string, address: string, phone: string): Promise<bigint>;
+    addCattle(breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string, status: CattleStatus): Promise<bigint | null>;
+    addCustomer(name: string, address: string, phone: string, active: boolean): Promise<bigint | null>;
     addDeliveryRecord(customerId: bigint, deliveryBoyName: string, date: Time, quantityLiters: number, status: Variant_missed_delivered, notes: string): Promise<bigint>;
     addMilkProductionRecord(date: Time, quantityLiters: number, notes: string): Promise<bigint>;
     addMilkRecord(cattleId: bigint, date: Time, quantityLiters: number, notes: string): Promise<bigint>;
@@ -93,6 +97,7 @@ export interface backendInterface {
     getCattleByHealthStatus(healthStatus: HealthStatus): Promise<Array<Cattle>>;
     getCattleByMilkProductionRange(minLiters: number, maxLiters: number): Promise<Array<Cattle>>;
     getCattleByPurchaseDateRange(startDate: Time, endDate: Time): Promise<Array<Cattle>>;
+    getCattleByStatus(status: CattleStatus): Promise<Array<Cattle>>;
     getCustomers(): Promise<Array<Customer>>;
     getDeliveryRecordsByCustomer(customerId: bigint): Promise<Array<DeliveryRecord>>;
     getDeliveryRecordsByDate(date: Time): Promise<Array<DeliveryRecord>>;
@@ -104,6 +109,6 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    updateCattle(cattleId: bigint, breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string): Promise<void>;
-    updateCustomer(customerId: bigint, name: string, address: string, phone: string): Promise<void>;
+    updateCattle(cattleId: bigint, breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string, status: CattleStatus): Promise<void>;
+    updateCustomer(customerId: bigint, name: string, address: string, phone: string, active: boolean): Promise<void>;
 }

@@ -9,6 +9,8 @@ import Principal "mo:core/Principal";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
+
+
 actor {
   // Access control state
   let accessControlState = AccessControl.initState();
@@ -47,7 +49,7 @@ actor {
     name : Text;
     address : Text;
     phone : Text;
-    activeStatus : Bool;
+    active : Bool;
   };
 
   type DeliveryRecord = {
@@ -70,7 +72,6 @@ actor {
     notes : Text;
   };
 
-  // New: MilkRecord type and logic
   type MilkRecord = {
     id : Nat;
     cattleId : Nat;
@@ -80,6 +81,8 @@ actor {
   };
 
   // Cattle management types and logic
+  type CattleStatus = { #active; #inactive };
+
   type Cattle = {
     id : Nat;
     breed : Text;
@@ -89,7 +92,7 @@ actor {
     purchaseDate : Time.Time;
     purchaseCost : Float;
     notes : Text;
-    activeStatus : Bool;
+    status : CattleStatus;
   };
 
   type HealthStatus = {
@@ -121,7 +124,7 @@ actor {
   };
 
   type AgeGroupRecoveryStats = {
-    ageRange : (Nat, Nat); // (min, max) months
+    ageRange : (Nat, Nat);
     recoveryCount : Nat;
     medianRecoveryTimeDays : Float;
     minRecoveryTimeDays : Float;
@@ -152,7 +155,6 @@ actor {
     };
   };
 
-  // New: MilkRecord module for sorting/filtering
   module MilkRecord {
     public func compare(x : MilkRecord, y : MilkRecord) : Order.Order {
       if (x.date < y.date) { return #less };
@@ -171,26 +173,41 @@ actor {
   var nextDeliveryRecordId = 1;
   var nextMilkRecordId = 1;
   var nextCattleId = 1;
-  var nextMilkRecordIdMain = 1; // Separate counter for main MilkRecord IDs
+  var nextMilkRecordIdMain = 1;
 
-  public shared ({ caller }) func addCustomer(name : Text, address : Text, phone : Text) : async Nat {
+  public shared ({ caller }) func addCustomer(name : Text, address : Text, phone : Text, active : Bool) : async ?Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can add customers");
     };
-    let id = nextCustomerId;
-    nextCustomerId += 1;
 
-    let customer : Customer = {
+    let id = nextCustomerId;
+    let newCustomer : Customer = {
       id;
       name;
       address;
       phone;
-      activeStatus = false; // Default to not active
-      // TODO: Add activeStatus field in form
+      active;
     };
 
-    customers.add(id, customer);
-    id;
+    var duplicateFound = false;
+    for (customer in customers.values()) {
+      if (customer.name == name) {
+        duplicateFound := true;
+      };
+    };
+
+    switch (customers.get(id), duplicateFound) {
+      case (null, false) {
+        customers.add(id, newCustomer);
+        nextCustomerId += 1;
+        ?id;
+      };
+      case (?existingCustomer, _) {
+        nextCustomerId += 1;
+        ?existingCustomer.id;
+      };
+      case (null, true) { nextCustomerId += 1; null };
+    };
   };
 
   public query ({ caller }) func getCustomers() : async [Customer] {
@@ -200,8 +217,7 @@ actor {
     customers.values().toArray();
   };
 
-  // Customer management functions for updating customer
-  public shared ({ caller }) func updateCustomer(customerId : Nat, name : Text, address : Text, phone : Text) : async () {
+  public shared ({ caller }) func updateCustomer(customerId : Nat, name : Text, address : Text, phone : Text, active : Bool) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update customers");
     };
@@ -213,7 +229,7 @@ actor {
           name;
           address;
           phone;
-          activeStatus = false; // Default to inactive
+          active;
         };
         customers.add(customerId, updatedCustomer);
       };
@@ -326,7 +342,6 @@ actor {
     );
   };
 
-  // New: MilkRecord management functions
   public shared ({ caller }) func addMilkRecord(
     cattleId : Nat,
     date : Time.Time,
@@ -378,7 +393,6 @@ actor {
     );
   };
 
-  // Cattle management functions
   public shared ({ caller }) func addCattle(
     breed : Text,
     ageMonths : Nat,
@@ -387,14 +401,13 @@ actor {
     purchaseDate : Time.Time,
     purchaseCost : Float,
     notes : Text,
-  ) : async Nat {
+    status : CattleStatus,
+  ) : async ?Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add cattle");
+      Runtime.trap("Unauthorized: Only users can add cattle records");
     };
 
     let id = nextCattleId;
-    nextCattleId += 1;
-
     let newCattle : Cattle = {
       id;
       breed;
@@ -404,11 +417,28 @@ actor {
       purchaseDate;
       purchaseCost;
       notes;
-      activeStatus = false; // Default to inactive
+      status;
     };
 
-    cattleRecords.add(id, newCattle);
-    id;
+    var duplicateFound = false;
+    for (cattle in cattleRecords.values()) {
+      if (cattle.breed == breed) {
+        duplicateFound := true;
+      };
+    };
+
+    switch (cattleRecords.get(id), duplicateFound) {
+      case (null, false) {
+        cattleRecords.add(id, newCattle);
+        nextCattleId += 1;
+        ?id;
+      };
+      case (?existingCattle, _) {
+        nextCattleId += 1;
+        ?existingCattle.id;
+      };
+      case (null, true) { nextCattleId += 1; null };
+    };
   };
 
   public query ({ caller }) func getAllCattle() : async [Cattle] {
@@ -418,7 +448,6 @@ actor {
     cattleRecords.values().toArray();
   };
 
-  // Cattle management functions for updating cattle
   public shared ({ caller }) func updateCattle(
     cattleId : Nat,
     breed : Text,
@@ -428,6 +457,7 @@ actor {
     purchaseDate : Time.Time,
     purchaseCost : Float,
     notes : Text,
+    status : CattleStatus,
   ) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can update cattle");
@@ -444,7 +474,7 @@ actor {
           purchaseDate;
           purchaseCost;
           notes;
-          activeStatus = false;
+          status;
         };
         cattleRecords.add(cattleId, updatedCattle);
       };
@@ -518,6 +548,15 @@ actor {
     cattleRecords.values().toArray().filter(
       func(r) { r.purchaseDate >= startDate and r.purchaseDate <= endDate }
     );
+  };
+
+  public query ({ caller }) func getCattleByStatus(
+    status : CattleStatus
+  ) : async [Cattle] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view cattle records");
+    };
+    cattleRecords.values().toArray().filter(func(r) { r.status == status });
   };
 
   func getDate(timestamp : Time.Time) : Time.Time {

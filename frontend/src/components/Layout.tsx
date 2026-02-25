@@ -46,9 +46,9 @@ export default function Layout({ children }: LayoutProps) {
             {/* Logo */}
             <div className="flex items-center gap-3">
               <img
-                src="/assets/generated/ao-farms-logo.dim_320x160.png"
-                alt="AO Farms"
-                className="h-10 w-auto object-contain"
+                src="/assets/generated/ao-farms-logo.dim_400x400.png"
+                alt="A.O. Farms logo"
+                className="h-12 w-auto object-contain"
               />
             </div>
 

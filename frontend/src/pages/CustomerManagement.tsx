@@ -35,11 +35,28 @@ export default function CustomerManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
-  const activeCustomers = customers.filter((c) => c.activeStatus);
+  const activeCustomers = customers.filter((c) => c.active === true);
 
   const handleEditOpen = (c: Customer) => {
     setEditingCustomer(c);
     setEditDialogOpen(true);
+  };
+
+  const handleAddDialogChange = (open: boolean) => {
+    // Prevent closing while a submission is in progress
+    if (!open && addCustomerMutation.isPending) return;
+    if (!open) addCustomerMutation.reset();
+    setAddDialogOpen(open);
+  };
+
+  const handleEditDialogChange = (open: boolean) => {
+    // Prevent closing while a submission is in progress
+    if (!open && updateCustomerMutation.isPending) return;
+    if (!open) {
+      updateCustomerMutation.reset();
+      setEditingCustomer(null);
+    }
+    setEditDialogOpen(open);
   };
 
   return (
@@ -118,8 +135,8 @@ export default function CustomerManagement() {
                       <TableCell className="text-sm text-muted-foreground">{c.address}</TableCell>
                       <TableCell className="text-sm">{c.phone}</TableCell>
                       <TableCell>
-                        <Badge variant={c.activeStatus ? 'default' : 'secondary'}>
-                          {c.activeStatus ? 'Active' : 'Inactive'}
+                        <Badge variant={c.active ? 'default' : 'secondary'}>
+                          {c.active ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
                       {isAuthenticated && (
@@ -146,7 +163,7 @@ export default function CustomerManagement() {
       </Card>
 
       {/* Add Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      <Dialog open={addDialogOpen} onOpenChange={handleAddDialogChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Customer</DialogTitle>
@@ -158,9 +175,11 @@ export default function CustomerManagement() {
                   name: data.name,
                   address: data.address,
                   phone: data.phone,
+                  active: data.active,
                 });
                 toast.success('Customer added successfully!');
                 setAddDialogOpen(false);
+                addCustomerMutation.reset();
               } catch (err) {
                 toast.error('Failed to add customer. Please try again.');
               }
@@ -171,7 +190,7 @@ export default function CustomerManagement() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog open={editDialogOpen} onOpenChange={handleEditDialogChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Customer</DialogTitle>
@@ -186,10 +205,12 @@ export default function CustomerManagement() {
                     name: data.name,
                     address: data.address,
                     phone: data.phone,
+                    active: data.active,
                   });
                   toast.success('Customer updated successfully!');
                   setEditDialogOpen(false);
                   setEditingCustomer(null);
+                  updateCustomerMutation.reset();
                 } catch (err) {
                   toast.error('Failed to update customer. Please try again.');
                 }

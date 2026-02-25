@@ -1,14 +1,39 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T14:48:39.646Z",
-  "summary": "The diff shows that frontend/src/components/Layout.tsx was modified to restore the original logo (ao-farms-logo.dim_320x160.png) and remove the redundant text title added in Version 16. This directly addresses REQ-1. The file summary confirms: 'restored the logo to the original ao-farms-logo.dim_320x160.png asset and removed the redundant text title that was added in Version 16.' Navigation links and other header/footer elements appear unchanged. No hallucinated features were detected.",
-  "missing_requirements": [],
-  "hallucinated_features": [],
-  "confidence": 0.92,
+  "generatedAt": "2026-02-25T15:42:36.061Z",
+  "summary": "The diff implements the core CSV export functionality for the Milk Production page. A 'Download CSV' button is added to MilkProduction.tsx, an exportMilkProductionRecordsToCSV utility is added to csvExport.ts, the button calls the utility with filtered records, and the button is disabled when no records are present. The filename uses today's date in the required format. Most acceptance criteria for REQ-1 are satisfied. However, the exported CSV headers include 'Cattle ID' and 'Breed' but do not include the cattle's name — the requirement asks for 'Cattle ID or Name'.",
+  "missing_requirements": [
+    {
+      "id": "REQ-1",
+      "requirement": "Exported columns include at minimum: Date, Cattle ID or Name, Milk Quantity (Liters). The cattle name should be included or available as an alternative to Cattle ID.",
+      "reason": "The exportMilkProductionRecordsToCSV function uses headers ['Date', 'Cattle ID', 'Breed', 'Quantity (L)', 'Notes'] and maps cattleInfo to its breed, not its name. The cattle name is not included in the CSV output, only the numeric ID and breed. The requirement states 'Cattle ID or Name' — while Cattle ID is present, no cattle name column is exported.",
+      "evidence": [
+        "frontend/src/utils/csvExport.ts"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "A 'Breed' column is included in the milk production CSV export.",
+      "reason": "The requirement specifies columns for Date, Cattle ID/Name, and Quantity (Liters) plus any other relevant fields already shown in the records table. Breed was added but was not explicitly requested and may not be shown in the UI table.",
+      "evidence": [
+        "frontend/src/utils/csvExport.ts"
+      ]
+    },
+    {
+      "description": "A summary section (Total Records, Total Quantity) is appended at the bottom of the milk production CSV file.",
+      "reason": "The requirement does not mention adding a summary section to the milk production CSV. This was not requested but was added, mirroring the delivery CSV pattern.",
+      "evidence": [
+        "frontend/src/utils/csvExport.ts"
+      ]
+    }
+  ],
+  "confidence": 0.82,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/components/Layout.tsx",
+    "frontend/src/pages/MilkProduction.tsx",
+    "frontend/src/utils/csvExport.ts",
     "project_state.json"
   ]
 }

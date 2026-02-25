@@ -2,10 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-restore-the-logo-in-the-layout-component-frontend-src-components-layout-tsx-to-its-original-appearance-as-it-was-before-version-16-inspect-the-current-logo-markup-and-revert-any-unintended-changes-to-the-logo-image-source-size-styling-or-text-that-were-introduced-during-the-recent-deployment",
-      "featureTitle": "Restore the logo in the Layout component (frontend/src/components/Layout.tsx) to its original appearance as it was before Version 16. Inspect the current logo markup and revert any unintended changes to the logo image source, size, styling, or text that were introduced during the recent deployment.",
+      "featureId": "feature-add-a-download-csv-button-to-the-milk-production-page-that-exports-all-currently-displayed-filtered-milk-production-records-as-a-csv-file-the-csv-should-include-columns-for-date-cattle-id-name-quantity-liters-and-any-other-relevant-fields-already-shown-in-the-records-table",
+      "featureTitle": "Add a 'Download CSV' button to the Milk Production page that exports all currently displayed (filtered) milk production records as a CSV file. The CSV should include columns for Date, Cattle ID/Name, Quantity (Liters), and any other relevant fields already shown in the records table.",
       "files": [
-        "frontend/src/components/Layout.tsx"
+        "frontend/src/pages/MilkProduction.tsx",
+        "frontend/src/utils/csvExport.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",

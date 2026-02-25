@@ -12,19 +12,21 @@ import type { Principal } from '@icp-sdk/core/principal';
 
 export interface Cattle {
   'id' : bigint,
+  'status' : CattleStatus,
   'purchaseCost' : number,
   'purchaseDate' : Time,
   'ageMonths' : bigint,
-  'activeStatus' : boolean,
   'healthStatus' : HealthStatus,
   'dailyMilkProductionLiters' : number,
   'notes' : string,
   'breed' : string,
 }
+export type CattleStatus = { 'active' : null } |
+  { 'inactive' : null };
 export interface Customer {
   'id' : bigint,
+  'active' : boolean,
   'name' : string,
-  'activeStatus' : boolean,
   'address' : string,
   'phone' : string,
 }
@@ -68,10 +70,10 @@ export type UserRole = { 'admin' : null } |
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addCattle' : ActorMethod<
-    [string, bigint, number, HealthStatus, Time, number, string],
-    bigint
+    [string, bigint, number, HealthStatus, Time, number, string, CattleStatus],
+    [] | [bigint]
   >,
-  'addCustomer' : ActorMethod<[string, string, string], bigint>,
+  'addCustomer' : ActorMethod<[string, string, string, boolean], [] | [bigint]>,
   'addDeliveryRecord' : ActorMethod<
     [
       bigint,
@@ -102,6 +104,7 @@ export interface _SERVICE {
     Array<Cattle>
   >,
   'getCattleByPurchaseDateRange' : ActorMethod<[Time, Time], Array<Cattle>>,
+  'getCattleByStatus' : ActorMethod<[CattleStatus], Array<Cattle>>,
   'getCustomers' : ActorMethod<[], Array<Customer>>,
   'getDeliveryRecordsByCustomer' : ActorMethod<[bigint], Array<DeliveryRecord>>,
   'getDeliveryRecordsByDate' : ActorMethod<[Time], Array<DeliveryRecord>>,
@@ -120,10 +123,23 @@ export interface _SERVICE {
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'updateCattle' : ActorMethod<
-    [bigint, string, bigint, number, HealthStatus, Time, number, string],
+    [
+      bigint,
+      string,
+      bigint,
+      number,
+      HealthStatus,
+      Time,
+      number,
+      string,
+      CattleStatus,
+    ],
     undefined
   >,
-  'updateCustomer' : ActorMethod<[bigint, string, string, string], undefined>,
+  'updateCustomer' : ActorMethod<
+    [bigint, string, string, string, boolean],
+    undefined
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

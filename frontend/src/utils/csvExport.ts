@@ -1,4 +1,4 @@
-import { DeliveryRecord, Variant_missed_delivered } from '../backend';
+import { DeliveryRecord, MilkRecord, Cattle, Variant_missed_delivered } from '../backend';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -57,6 +57,54 @@ export function downloadCustomerMonthlyCSV(
     `Delivered,${deliveredCount}`,
     `Missed,${missedCount}`,
     `Total Liters Delivered,${totalLiters.toFixed(2)}`,
+  ];
+
+  const csvContent = csvLines.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+export function exportMilkProductionRecordsToCSV(
+  records: MilkRecord[],
+  cattleList: Cattle[],
+): void {
+  const today = new Date().toISOString().split('T')[0];
+  const filename = `milk-production-${today}.csv`;
+
+  const cattleMap = new Map<string, Cattle>();
+  for (const c of cattleList) {
+    cattleMap.set(c.id.toString(), c);
+  }
+
+  const headers = ['Date', 'Cattle ID', 'Breed', 'Quantity (L)', 'Notes'];
+
+  const rows = records.map((r) => {
+    const cattleInfo = cattleMap.get(r.cattleId.toString());
+    return [
+      escapeCsvField(nanosecondsToDateStr(r.date)),
+      escapeCsvField(`#${r.cattleId.toString()}`),
+      escapeCsvField(cattleInfo ? cattleInfo.breed : 'Unknown'),
+      escapeCsvField(r.quantityLiters.toFixed(2)),
+      escapeCsvField(r.notes || ''),
+    ];
+  });
+
+  const totalLiters = records.reduce((sum, r) => sum + r.quantityLiters, 0);
+
+  const csvLines = [
+    headers.join(','),
+    ...rows.map((row) => row.join(',')),
+    '',
+    `Total Records,${records.length}`,
+    `Total Quantity (L),${totalLiters.toFixed(2)}`,
   ];
 
   const csvContent = csvLines.join('\n');
