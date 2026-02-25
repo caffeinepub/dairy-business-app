@@ -1,41 +1,53 @@
 {
   "kind": "build_request",
-  "title": "Add CSV download/export for Milk Production Tracker",
-  "projectName": "AO Farms Manager",
-  "priority": "normal",
+  "title": "Fix compilation error causing production deployment failure",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add a 'Download CSV' button to the Milk Production page that exports all currently displayed (filtered) milk production records as a CSV file. The CSV should include columns for Date, Cattle ID/Name, Quantity (Liters), and any other relevant fields already shown in the records table.",
-      "target": "frontend",
+      "text": "Identify and fix the Motoko compilation error in backend/main.mo that is preventing successful deployment to the Internet Computer network. Ensure the actor compiles cleanly with no type errors, missing imports, or syntax issues.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-8"
+          "msg-recent"
         ],
         "quotes": [
-          "if we can download Milk Production tracker also it is better"
+          "The deployment error for Version 24 means the build failed when trying to go live on the Internet Computer network. This can happen due to a compilation error in the generated code."
         ]
       },
       "acceptanceCriteria": [
-        "A 'Download CSV' button is visible on the MilkProduction page, near the records table or filter controls.",
-        "Clicking the button triggers a browser file download of a .csv file.",
-        "The CSV file contains a header row and one row per milk production record currently shown in the table.",
-        "Exported columns include at minimum: Date, Cattle ID or Name, Milk Quantity (Liters).",
-        "If filters are applied (e.g., date range, cattle selection), only the filtered records are exported.",
-        "The exported filename is descriptive, e.g., milk-production-YYYY-MM-DD.csv.",
-        "The button is disabled or shows a message when there are no records to export."
+        "backend/main.mo compiles without errors",
+        "All existing CRUD operations for cattle, customers, deliveries, and milk production remain functional",
+        "The canister deploys successfully to the Internet Computer network"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Verify that the Add Customer and Add Cattle form submission bug fixes (which call backend mutations and update the UI without a page reload) are preserved and working correctly after the compilation fix.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-recent"
+        ],
+        "quotes": [
+          "the fix for adding customers and cattle should now be working"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Submitting the Add Customer form successfully calls the backend mutation and updates the customer list without a full page reload",
+        "Submitting the Add Cattle form successfully calls the backend mutation and updates the cattle list without a full page reload",
+        "No double-submission occurs due to the existing ref-based guard in CattleForm and CustomerForm"
       ]
     }
   ],
   "constraints": [
-    "Reuse or mirror the existing CSV export utility pattern in frontend/src/utils/csvExport.ts for consistency.",
-    "Do not modify any immutable frontend paths.",
-    "No backend changes are required; export should be driven purely from frontend state/query data."
+    "Do not change the frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or any files under frontend/src/components/ui",
+    "Preserve all existing backend data model types and CRUD API surface — no breaking changes to the actor interface"
   ],
   "nonGoals": [
-    "Exporting delivery records or any other page's data as part of this request.",
-    "Adding a backend endpoint for CSV generation.",
-    "Changing the existing MonthlyReports CSV export functionality."
+    "Adding new features or pages",
+    "Changing the visual design or UI layout",
+    "Modifying inventory or delivery features"
   ],
   "imageRequirements": {
     "required": [],

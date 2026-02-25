@@ -3,7 +3,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Droplets } from 'lucide-react';
 import type { MilkRecord } from '../backend';
-import { nanosecondsToDate } from '../hooks/useQueries';
 
 interface MilkProductionChartProps {
   milkRecords: MilkRecord[];

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Truck, Plus, Filter, MessageCircle } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Truck, Plus, Filter, MessageCircle, Download, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,10 +24,15 @@ import {
 import {
   useGetCustomers,
   useGetDeliveryRecordsByDate,
+  useGetDeliveryRecordsByMonth,
   useAddDeliveryRecord,
+  nanosecondsToDate,
+  dateToNanoseconds,
 } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import WhatsAppMessageModal from '../components/WhatsAppMessageModal';
+import DeliveryQuantityChart from '../components/DeliveryQuantityChart';
+import { exportDeliveryRecordsToCSV } from '../utils/csvExport';
 import type { DeliveryRecord, Customer } from '../backend';
 import { Variant_missed_delivered } from '../backend';
 
@@ -38,10 +43,20 @@ export default function DeliveryReports() {
   const { data: customers = [] } = useGetCustomers();
   const addDeliveryRecord = useAddDeliveryRecord();
 
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
   const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [filterStart, setFilterStart] = useState('');
+  const [filterEnd, setFilterEnd] = useState('');
+
   const { data: deliveries = [], isLoading } = useGetDeliveryRecordsByDate(
     new Date(filterDate || new Date().toISOString().split('T')[0]),
   );
+
+  // Fetch current month's deliveries for the chart
+  const { data: monthDeliveries = [] } = useGetDeliveryRecordsByMonth(currentMonth, currentYear);
 
   // Form state
   const [formCustomerId, setFormCustomerId] = useState('');
@@ -65,7 +80,7 @@ export default function DeliveryReports() {
     await addDeliveryRecord.mutateAsync({
       customerId: BigInt(formCustomerId),
       deliveryBoyName: formDeliveryBoy,
-      date: new Date(formDate),
+      date: dateToNanoseconds(new Date(formDate)),
       quantityLiters: parseFloat(formQty),
       status:
         formStatus === 'delivered'
@@ -89,15 +104,37 @@ export default function DeliveryReports() {
     return customers.find((c) => c.id === customerId);
   };
 
-  const totalDelivered = deliveries.filter(
+  // Apply optional date range filter on top of the date-filtered deliveries
+  const filteredDeliveries = useMemo(() => {
+    if (!filterStart && !filterEnd) return deliveries;
+    return deliveries.filter((d) => {
+      const date = nanosecondsToDate(d.date);
+      const dateStr = date.toISOString().split('T')[0];
+      if (filterStart && dateStr < filterStart) return false;
+      if (filterEnd && dateStr > filterEnd) return false;
+      return true;
+    });
+  }, [deliveries, filterStart, filterEnd]);
+
+  const totalDelivered = filteredDeliveries.filter(
     (d) => d.status === Variant_missed_delivered.delivered,
   ).length;
-  const totalMissed = deliveries.filter(
+  const totalMissed = filteredDeliveries.filter(
     (d) => d.status === Variant_missed_delivered.missed,
   ).length;
-  const totalLiters = deliveries
+  const totalLiters = filteredDeliveries
     .filter((d) => d.status === Variant_missed_delivered.delivered)
     .reduce((sum, d) => sum + d.quantityLiters, 0);
+
+  const handleClearFilters = () => {
+    setFilterStart('');
+    setFilterEnd('');
+    setFilterDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const handleDownloadCSV = () => {
+    exportDeliveryRecordsToCSV(filteredDeliveries, customers);
+  };
 
   return (
     <div className="space-y-6">
@@ -210,13 +247,13 @@ export default function DeliveryReports() {
           </Card>
         )}
 
-        {/* Summary Cards */}
+        {/* Stats */}
         <div className={`${isAuthenticated ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-4`}>
           <div className="grid grid-cols-3 gap-4">
             {[
               { label: 'Delivered', value: totalDelivered, color: 'text-farm-green' },
               { label: 'Missed', value: totalMissed, color: 'text-destructive' },
-              { label: 'Total Liters', value: `${totalLiters.toFixed(1)}L`, color: 'text-farm-sky' },
+              { label: 'Total Liters', value: `${totalLiters.toFixed(1)}L`, color: 'text-primary' },
             ].map(({ label, value, color }) => (
               <Card key={label}>
                 <CardContent className="p-4 text-center">
@@ -227,55 +264,94 @@ export default function DeliveryReports() {
             ))}
           </div>
 
-          {/* Filter */}
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-muted-foreground" />
-                <Label>Filter by Date</Label>
-                <Input
-                  type="date"
-                  value={filterDate}
-                  onChange={(e) => setFilterDate(e.target.value)}
-                  className="w-40 h-8 text-sm ml-auto"
-                />
-              </div>
-            </CardHeader>
-          </Card>
+          {/* Monthly Chart */}
+          <DeliveryQuantityChart deliveryRecords={monthDeliveries} />
         </div>
       </div>
 
-      {/* Deliveries Table */}
+      {/* Filter + Table */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Truck className="w-4 h-4 text-primary" />
-            Delivery Records
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Truck className="w-4 h-4 text-primary" />
+              Delivery Records
+            </CardTitle>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="w-36 h-8 text-sm"
+              />
+              <span className="text-muted-foreground text-sm">range:</span>
+              <Input
+                type="date"
+                value={filterStart}
+                onChange={(e) => setFilterStart(e.target.value)}
+                className="w-36 h-8 text-sm"
+                placeholder="From"
+              />
+              <span className="text-muted-foreground text-sm">to</span>
+              <Input
+                type="date"
+                value={filterEnd}
+                onChange={(e) => setFilterEnd(e.target.value)}
+                className="w-36 h-8 text-sm"
+                placeholder="To"
+              />
+              {(filterStart || filterEnd) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="h-8 text-muted-foreground hover:text-foreground gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  Clear
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadCSV}
+                disabled={filteredDeliveries.length === 0}
+                className="flex items-center gap-1.5 h-8"
+              >
+                <Download className="w-3.5 h-3.5" />
+                CSV
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="text-center py-10 text-muted-foreground">Loading deliveries…</div>
-          ) : deliveries.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">Loading records…</div>
+          ) : filteredDeliveries.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
-              No deliveries found for the selected date.
+              No delivery records found for the selected date.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Date</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Delivery Boy</TableHead>
-                    <TableHead>Quantity (L)</TableHead>
+                    <TableHead>Qty (L)</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Notes</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>WhatsApp</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {deliveries.map((d) => (
+                  {filteredDeliveries.map((d) => (
                     <TableRow key={d.id.toString()}>
+                      <TableCell className="text-sm">
+                        {nanosecondsToDate(d.date).toLocaleDateString()}
+                      </TableCell>
                       <TableCell className="font-medium">{getCustomerName(d.customerId)}</TableCell>
                       <TableCell className="text-sm">{d.deliveryBoyName}</TableCell>
                       <TableCell className="text-sm">{d.quantityLiters.toFixed(1)}</TableCell>
@@ -298,7 +374,7 @@ export default function DeliveryReports() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            title="Send WhatsApp"
+                            className="h-8 w-8 text-farm-green hover:text-farm-green hover:bg-farm-green/10"
                             onClick={() => {
                               const customer = getCustomer(d.customerId);
                               if (customer) {
@@ -307,7 +383,7 @@ export default function DeliveryReports() {
                               }
                             }}
                           >
-                            <MessageCircle className="w-4 h-4 text-farm-green" />
+                            <MessageCircle className="w-4 h-4" />
                           </Button>
                         )}
                       </TableCell>
@@ -320,7 +396,6 @@ export default function DeliveryReports() {
         </CardContent>
       </Card>
 
-      {/* WhatsApp Modal - always mounted */}
       <WhatsAppMessageModal
         open={whatsAppModalOpen}
         onOpenChange={setWhatsAppModalOpen}

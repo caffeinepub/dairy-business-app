@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { AlertTriangle, Plus, Edit2, Beef } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { toast } from 'sonner';
+import { PlusCircle, Edit2, Beef } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -8,7 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Table,
@@ -18,158 +18,153 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useGetAllCattle, useAddCattle, useUpdateCattle, nanosecondsToDate } from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CattleForm from '../components/CattleForm';
-import type { Cattle } from '../backend';
+import { useGetAllCattle, useAddCattle, useUpdateCattle } from '../hooks/useQueries';
+import type { Cattle, HealthStatus } from '../backend';
 import { CattleStatus } from '../backend';
-import { toast } from 'sonner';
+
+function healthLabel(h: HealthStatus): string {
+  if (h.__kind__ === 'sick') return `Sick (${h.sick.condition})`;
+  if (h.__kind__ === 'recovered') return 'Recovered';
+  return 'Healthy';
+}
+
+function healthVariant(h: HealthStatus): 'default' | 'destructive' | 'secondary' | 'outline' {
+  if (h.__kind__ === 'sick') return 'destructive';
+  if (h.__kind__ === 'recovered') return 'secondary';
+  return 'default';
+}
 
 export default function CattleManagement() {
-  const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity;
+  const { data: cattleList = [], isLoading } = useGetAllCattle();
+  const addCattle = useAddCattle();
+  const updateCattle = useUpdateCattle();
 
-  const { data: cattle = [], isLoading } = useGetAllCattle();
-  const addCattleMutation = useAddCattle();
-  const updateCattleMutation = useUpdateCattle();
+  const [addOpen, setAddOpen] = useState(false);
+  const [editCattle, setEditCattle] = useState<Cattle | null>(null);
 
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingCattle, setEditingCattle] = useState<Cattle | null>(null);
+  const activeCattle = cattleList.filter((c) => c.status === CattleStatus.active);
+  const sickCattle = cattleList.filter((c) => c.healthStatus.__kind__ === 'sick');
+  const avgMilk =
+    cattleList.length > 0
+      ? cattleList.reduce((sum, c) => sum + c.dailyMilkProductionLiters, 0) / cattleList.length
+      : 0;
 
-  const activeCattle = cattle.filter((c) => c.status === CattleStatus.active);
-  const healthyCattle = cattle.filter((c) => c.healthStatus.__kind__ === 'healthy');
-  const sickCattle = cattle.filter((c) => c.healthStatus.__kind__ === 'sick');
-
-  const handleEditOpen = (c: Cattle) => {
-    setEditingCattle(c);
-    setEditDialogOpen(true);
-  };
-
-  const handleAddDialogChange = (open: boolean) => {
-    // Only allow closing if not currently submitting
-    if (!open && addCattleMutation.isPending) return;
-    if (!open) addCattleMutation.reset();
-    setAddDialogOpen(open);
-  };
-
-  const handleEditDialogChange = (open: boolean) => {
-    // Only allow closing if not currently submitting
-    if (!open && updateCattleMutation.isPending) return;
-    if (!open) {
-      updateCattleMutation.reset();
-      setEditingCattle(null);
+  const handleAdd = async (data: {
+    breed: string;
+    ageMonths: bigint;
+    dailyMilkProductionLiters: number;
+    healthStatus: HealthStatus;
+    purchaseDate: bigint;
+    purchaseCost: number;
+    notes: string;
+    status: CattleStatus;
+  }) => {
+    try {
+      const result = await addCattle.mutateAsync(data);
+      if (result === null) {
+        toast.error('A cattle record with this breed already exists.');
+      } else {
+        toast.success('Cattle added successfully!');
+        setAddOpen(false);
+      }
+    } catch (err) {
+      toast.error('Failed to add cattle. Please try again.');
     }
-    setEditDialogOpen(open);
   };
 
-  const getHealthBadge = (c: Cattle) => {
-    if (c.healthStatus.__kind__ === 'healthy') {
-      return <Badge className="bg-farm-green/20 text-farm-green border-farm-green/30">Healthy</Badge>;
+  const handleEdit = async (data: {
+    breed: string;
+    ageMonths: bigint;
+    dailyMilkProductionLiters: number;
+    healthStatus: HealthStatus;
+    purchaseDate: bigint;
+    purchaseCost: number;
+    notes: string;
+    status: CattleStatus;
+  }) => {
+    if (!editCattle) return;
+    try {
+      await updateCattle.mutateAsync({ id: editCattle.id, ...data });
+      toast.success('Cattle updated successfully!');
+      setEditCattle(null);
+    } catch (err) {
+      toast.error('Failed to update cattle. Please try again.');
     }
-    if (c.healthStatus.__kind__ === 'sick') {
-      return <Badge variant="destructive">Sick</Badge>;
-    }
-    return <Badge variant="secondary">Recovered</Badge>;
-  };
-
-  const getStatusBadge = (c: Cattle) => {
-    const isActive = c.status === CattleStatus.active;
-    return (
-      <Badge variant={isActive ? 'default' : 'secondary'}>
-        {isActive ? 'Active' : 'Inactive'}
-      </Badge>
-    );
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground font-display">Cattle Management</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Manage your herd — {cattle.length} total, {activeCattle.length} active
+            Manage your herd, health records, and milk production data.
           </p>
         </div>
-        {isAuthenticated && (
-          <Dialog open={addDialogOpen} onOpenChange={handleAddDialogChange}>
-            <DialogTrigger asChild>
-              <Button className="gap-2" onClick={() => setAddDialogOpen(true)}>
-                <Plus className="w-4 h-4" />
-                Add Cattle
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add New Cattle</DialogTitle>
-              </DialogHeader>
-              <CattleForm
-                onSubmit={async (data) => {
-                  try {
-                    await addCattleMutation.mutateAsync({
-                      breed: data.breed,
-                      ageMonths: data.ageMonths,
-                      dailyMilkProductionLiters: data.dailyMilkProductionLiters,
-                      healthStatus: data.healthStatus,
-                      purchaseDate: data.purchaseDate,
-                      purchaseCost: data.purchaseCost,
-                      notes: data.notes,
-                      status: data.status,
-                    });
-                    toast.success('Cattle added successfully!');
-                    setAddDialogOpen(false);
-                    addCattleMutation.reset();
-                  } catch (err) {
-                    toast.error('Failed to add cattle. Please try again.');
-                  }
-                }}
-                isLoading={addCattleMutation.isPending}
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        <Button onClick={() => setAddOpen(true)} className="gap-2">
+          <PlusCircle className="h-4 w-4" />
+          Add Cattle
+        </Button>
       </div>
 
-      {!isAuthenticated && (
-        <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-800 dark:text-amber-200">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-          <p className="text-sm">
-            You are viewing in read-only mode. Please log in to add or edit cattle records.
-          </p>
-        </div>
-      )}
-
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Total', value: cattle.length, color: 'text-foreground' },
-          { label: 'Active', value: activeCattle.length, color: 'text-farm-green' },
-          { label: 'Healthy', value: healthyCattle.length, color: 'text-farm-sky' },
-          { label: 'Sick', value: sickCattle.length, color: 'text-destructive' },
-        ].map(({ label, value, color }) => (
-          <Card key={label}>
-            <CardContent className="p-4 text-center">
-              <p className={`text-2xl font-bold ${color}`}>{value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{label}</p>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">
+              Total Cattle
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{cattleList.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">
+              Active
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600">{activeCattle.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">
+              Sick
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-red-600">{sickCattle.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">
+              Avg Daily Milk
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{avgMilk.toFixed(1)} L</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Table */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Beef className="w-4 h-4 text-primary" />
-            Cattle Records
-          </CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="text-center py-10 text-muted-foreground">Loading cattle records…</div>
-          ) : cattle.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">
-              No cattle records yet. Add your first cattle to get started.
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              Loading cattle records...
+            </div>
+          ) : cattleList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+              <Beef className="h-10 w-10 opacity-30" />
+              <p>No cattle records yet. Add your first cattle!</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -181,37 +176,44 @@ export default function CattleManagement() {
                     <TableHead>Age (mo)</TableHead>
                     <TableHead>Daily Milk (L)</TableHead>
                     <TableHead>Health</TableHead>
-                    <TableHead>Purchase Date</TableHead>
                     <TableHead>Status</TableHead>
-                    {isAuthenticated && <TableHead>Actions</TableHead>}
+                    <TableHead>Purchase Cost</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {cattle.map((c) => (
-                    <TableRow key={c.id.toString()}>
-                      <TableCell className="font-mono text-sm">#{c.id.toString()}</TableCell>
-                      <TableCell className="font-medium">{c.breed}</TableCell>
-                      <TableCell>{c.ageMonths.toString()}</TableCell>
-                      <TableCell>{c.dailyMilkProductionLiters.toFixed(1)}</TableCell>
-                      <TableCell>{getHealthBadge(c)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {nanosecondsToDate(c.purchaseDate).toLocaleDateString()}
+                  {cattleList.map((cattle) => (
+                    <TableRow key={cattle.id.toString()}>
+                      <TableCell className="font-mono text-xs">
+                        #{cattle.id.toString()}
                       </TableCell>
-                      <TableCell>{getStatusBadge(c)}</TableCell>
-                      {isAuthenticated && (
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditOpen(c)}
-                              title="Edit"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
+                      <TableCell className="font-medium">{cattle.breed}</TableCell>
+                      <TableCell>{cattle.ageMonths.toString()}</TableCell>
+                      <TableCell>{cattle.dailyMilkProductionLiters.toFixed(1)}</TableCell>
+                      <TableCell>
+                        <Badge variant={healthVariant(cattle.healthStatus)}>
+                          {healthLabel(cattle.healthStatus)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            cattle.status === CattleStatus.active ? 'default' : 'outline'
+                          }
+                        >
+                          {cattle.status === CattleStatus.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>₹{cattle.purchaseCost.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditCattle(cattle)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -221,37 +223,33 @@ export default function CattleManagement() {
         </CardContent>
       </Card>
 
+      {/* Add Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Cattle</DialogTitle>
+            <DialogDescription>
+              Enter the details for the new cattle record.
+            </DialogDescription>
+          </DialogHeader>
+          <CattleForm onSubmit={handleAdd} isLoading={addCattle.isPending} />
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={handleEditDialogChange}>
+      <Dialog open={!!editCattle} onOpenChange={(open) => !open && setEditCattle(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Cattle</DialogTitle>
+            <DialogDescription>
+              Update the details for this cattle record.
+            </DialogDescription>
           </DialogHeader>
-          {editingCattle && (
+          {editCattle && (
             <CattleForm
-              initialValues={editingCattle}
-              onSubmit={async (data) => {
-                try {
-                  await updateCattleMutation.mutateAsync({
-                    cattleId: editingCattle.id,
-                    breed: data.breed,
-                    ageMonths: data.ageMonths,
-                    dailyMilkProductionLiters: data.dailyMilkProductionLiters,
-                    healthStatus: data.healthStatus,
-                    purchaseDate: data.purchaseDate,
-                    purchaseCost: data.purchaseCost,
-                    notes: data.notes,
-                    status: data.status,
-                  });
-                  toast.success('Cattle updated successfully!');
-                  setEditDialogOpen(false);
-                  setEditingCattle(null);
-                  updateCattleMutation.reset();
-                } catch (err) {
-                  toast.error('Failed to update cattle. Please try again.');
-                }
-              }}
-              isLoading={updateCattleMutation.isPending}
+              initialData={editCattle}
+              onSubmit={handleEdit}
+              isLoading={updateCattle.isPending}
             />
           )}
         </DialogContent>

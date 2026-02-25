@@ -2,11 +2,14 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-download-csv-button-to-the-milk-production-page-that-exports-all-currently-displayed-filtered-milk-production-records-as-a-csv-file-the-csv-should-include-columns-for-date-cattle-id-name-quantity-liters-and-any-other-relevant-fields-already-shown-in-the-records-table",
-      "featureTitle": "Add a 'Download CSV' button to the Milk Production page that exports all currently displayed (filtered) milk production records as a CSV file. The CSV should include columns for Date, Cattle ID/Name, Quantity (Liters), and any other relevant fields already shown in the records table.",
+      "featureId": "feature-verify-that-the-add-customer-and-add-cattle-form-submission-bug-fixes-which-call-backend-mutations-and-update-the-ui-without-a-page-reload-are-preserved-and-working-correctly-after-the-compilation-fix",
+      "featureTitle": "Verify that the Add Customer and Add Cattle form submission bug fixes (which call backend mutations and update the UI without a page reload) are preserved and working correctly after the compilation fix.",
       "files": [
-        "frontend/src/pages/MilkProduction.tsx",
-        "frontend/src/utils/csvExport.ts"
+        "frontend/src/components/CattleForm.tsx",
+        "frontend/src/components/CustomerForm.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/CattleManagement.tsx",
+        "frontend/src/pages/CustomerManagement.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -17,7 +20,7 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-1"
+        "REQ-2"
       ],
       "confidence": "high"
     }

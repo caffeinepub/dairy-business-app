@@ -1,106 +1,85 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2 } from 'lucide-react';
 import type { Customer } from '../backend';
 
-export interface CustomerFormProps {
-  initialValues?: Customer;
+interface CustomerFormProps {
+  initialData?: Customer;
   onSubmit: (data: {
     name: string;
     address: string;
     phone: string;
     active: boolean;
-  }) => Promise<void>;
+  }) => void;
   isLoading?: boolean;
 }
 
-export default function CustomerForm({ initialValues, onSubmit, isLoading }: CustomerFormProps) {
-  const [name, setName] = useState(initialValues?.name ?? '');
-  const [address, setAddress] = useState(initialValues?.address ?? '');
-  const [phone, setPhone] = useState(initialValues?.phone ?? '');
-  const [active, setActive] = useState<boolean>(initialValues?.active ?? true);
+export default function CustomerForm({ initialData, onSubmit, isLoading }: CustomerFormProps) {
+  const submittingRef = useRef(false);
 
-  // Guard against double-submission
-  const isSubmittingRef = useRef(false);
+  const [name, setName] = useState(initialData?.name ?? '');
+  const [address, setAddress] = useState(initialData?.address ?? '');
+  const [phone, setPhone] = useState(initialData?.phone ?? '');
+  const [active, setActive] = useState(initialData?.active ?? true);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
-    // Prevent concurrent submissions
-    if (isSubmittingRef.current || isLoading) return;
-    isSubmittingRef.current = true;
+    onSubmit({ name, address, phone, active });
 
-    try {
-      await onSubmit({ name, address, phone, active });
-    } finally {
-      isSubmittingRef.current = false;
-    }
+    setTimeout(() => {
+      submittingRef.current = false;
+    }, 1000);
   };
-
-  const disabled = isLoading || false;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="customer-name">Name</Label>
+      <div className="space-y-1">
+        <Label htmlFor="name">Name</Label>
         <Input
-          id="customer-name"
-          placeholder="Customer name"
+          id="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          placeholder="Customer name"
           required
-          disabled={disabled}
         />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="customer-address">Address</Label>
+      <div className="space-y-1">
+        <Label htmlFor="address">Address</Label>
         <Input
-          id="customer-address"
-          placeholder="Delivery address"
+          id="address"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          required
-          disabled={disabled}
+          placeholder="Delivery address"
         />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="customer-phone">Phone</Label>
+      <div className="space-y-1">
+        <Label htmlFor="phone">Phone</Label>
         <Input
-          id="customer-phone"
-          type="tel"
-          placeholder="+91 XXXXX XXXXX"
+          id="phone"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          disabled={disabled}
+          placeholder="+91 XXXXX XXXXX"
         />
       </div>
 
       <div className="flex items-center gap-3">
         <Switch
-          id="customer-active"
+          id="active"
           checked={active}
           onCheckedChange={setActive}
-          disabled={disabled}
         />
-        <Label htmlFor="customer-active">Active</Label>
+        <Label htmlFor="active">{active ? 'Active' : 'Inactive'}</Label>
       </div>
 
-      <Button type="submit" className="w-full" disabled={disabled}>
-        {isLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Saving…
-          </>
-        ) : initialValues ? (
-          'Update Customer'
-        ) : (
-          'Add Customer'
-        )}
+      <Button type="submit" disabled={isLoading} className="w-full">
+        {isLoading ? 'Saving...' : initialData ? 'Update Customer' : 'Add Customer'}
       </Button>
     </form>
   );

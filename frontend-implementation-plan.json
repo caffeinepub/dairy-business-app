@@ -1,30 +1,41 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Add CSV download/export for Milk Production Tracker",
+  "title": "Fix compilation error causing production deployment failure",
   "requirements": [
     {
-      "id": "REQ-1",
-      "summary": "Add CSV export functionality to the Milk Production page that downloads all currently displayed (filtered) milk production records",
+      "id": "REQ-2",
+      "summary": "Verify that the Add Customer and Add Cattle form submission bug fixes are preserved and working correctly after the compilation fix",
       "acceptanceCriteria": [
-        "A 'Download CSV' button is visible on the MilkProduction page, near the records table or filter controls.",
-        "Clicking the button triggers a browser file download of a .csv file.",
-        "The CSV file contains a header row and one row per milk production record currently shown in the table.",
-        "Exported columns include at minimum: Date, Cattle ID or Name, Milk Quantity (Liters).",
-        "If filters are applied (e.g., date range, cattle selection), only the filtered records are exported.",
-        "The exported filename is descriptive, e.g., milk-production-YYYY-MM-DD.csv.",
-        "The button is disabled or shows a message when there are no records to export."
+        "Submitting the Add Customer form successfully calls the backend mutation and updates the customer list without a full page reload",
+        "Submitting the Add Cattle form successfully calls the backend mutation and updates the cattle list without a full page reload",
+        "No double-submission occurs due to the existing ref-based guard in CattleForm and CustomerForm"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/csvExport.ts",
+          "path": "frontend/src/components/CattleForm.tsx",
           "operation": "modify",
-          "description": "Add a new exportMilkProductionRecordsToCSV function that accepts an array of MilkRecord objects (with cattle data joined) and generates a CSV file with columns for Date, Cattle ID, Cattle Breed/Name (if available), Quantity (Liters), and Notes. Follow the existing pattern used in the current CSV export utility, formatting the date appropriately and handling the nanosecond-to-Date conversion. The function should trigger a browser download with a filename like 'milk-production-YYYY-MM-DD.csv'."
+          "description": "Review and verify the ref-based double-submission guard is correctly implemented and working. Ensure the form submission calls the backend mutation via useAddCattle or useUpdateCattle and that the mutation invalidates the cattle query cache to trigger UI updates without a page reload."
         },
         {
-          "path": "frontend/src/pages/MilkProduction.tsx",
+          "path": "frontend/src/components/CustomerForm.tsx",
           "operation": "modify",
-          "description": "Add a 'Download CSV' button near the table or filter controls that calls the new exportMilkProductionRecordsToCSV function. The button should be disabled when filteredRecords is empty. Enhance the filtered records data by joining with cattle information (breed/ID) from the getAllCattle query before passing to the CSV export function, ensuring the exported CSV includes readable cattle identifiers. Position the button in the UI near the existing filter controls for easy discoverability."
+          "description": "Review and verify the ref-based double-submission guard is correctly implemented and working. Ensure the form submission calls the backend mutation via useAddCustomer or useUpdateCustomer and that the mutation invalidates the customer query cache to trigger UI updates without a page reload."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Verify that useAddCattle and useAddCustomer mutations correctly invalidate their respective query keys ('cattle' and 'customers') on success to ensure the UI updates automatically after form submission without requiring a page reload."
+        },
+        {
+          "path": "frontend/src/pages/CattleManagement.tsx",
+          "operation": "modify",
+          "description": "Verify that the CattleForm component is correctly wired to useAddCattle and useUpdateCattle mutations, and that successful submissions close the dialog and refresh the cattle list via query invalidation."
+        },
+        {
+          "path": "frontend/src/pages/CustomerManagement.tsx",
+          "operation": "modify",
+          "description": "Verify that the CustomerForm component is correctly wired to useAddCustomer and useUpdateCustomer mutations, and that successful submissions close the dialog and refresh the customer list via query invalidation."
         }
       ]
     }

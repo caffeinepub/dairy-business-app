@@ -1,26 +1,39 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T15:42:36.064Z",
+  "generatedAt": "2026-02-25T16:29:28.941Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 1,
+    "total": 2,
     "implemented": 1,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Add a 'Download CSV' button to the Milk Production page that exports all currently displayed (filtered) milk production records as a CSV file. The CSV should include columns for Date, Cattle ID/Name, Quantity (Liters), and any other relevant fields already shown in the records table.",
+        "summary": "Identify and fix the Motoko compilation error in backend/main.mo that is preventing successful deployment to the Internet Computer network. Ensure the actor compiles cleanly with no type errors, missing imports, or syntax issues.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-2",
+        "summary": "Verify that the Add Customer and Add Cattle form submission bug fixes (which call backend mutations and update the UI without a page reload) are preserved and working correctly after the compilation fix.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/utils/csvExport.ts",
-          "frontend/src/pages/MilkProduction.tsx"
+          "frontend/src/components/CattleForm.tsx",
+          "frontend/src/components/CustomerForm.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/CattleManagement.tsx",
+          "frontend/src/pages/CustomerManagement.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/utils/csvExport.ts",
-          "frontend/src/pages/MilkProduction.tsx"
+          "frontend/src/components/CattleForm.tsx",
+          "frontend/src/components/CustomerForm.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/CattleManagement.tsx",
+          "frontend/src/pages/CustomerManagement.tsx"
         ]
       }
     ]
@@ -30,8 +43,13 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/pages/MilkProduction.tsx",
-    "frontend/src/utils/csvExport.ts",
+    "frontend/src/components/CattleForm.tsx",
+    "frontend/src/components/CustomerForm.tsx",
+    "frontend/src/components/MilkProductionChart.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/CattleManagement.tsx",
+    "frontend/src/pages/CustomerManagement.tsx",
+    "frontend/src/pages/DeliveryReports.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

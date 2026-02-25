@@ -29,6 +29,7 @@ import {
 } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import MilkProductionChart from '../components/MilkProductionChart';
+import MilkProductionTrendChart from '../components/MilkProductionTrendChart';
 import { exportMilkProductionRecordsToCSV } from '../utils/csvExport';
 import type { MilkRecord } from '../backend';
 
@@ -81,6 +82,11 @@ export default function MilkProduction() {
 
   const handleDownloadCSV = () => {
     exportMilkProductionRecordsToCSV(filteredRecords, cattle);
+  };
+
+  const handleClearFilters = () => {
+    setFilterStart('');
+    setFilterEnd('');
   };
 
   return (
@@ -168,11 +174,14 @@ export default function MilkProduction() {
           </Card>
         )}
 
-        {/* Chart */}
+        {/* 7-Day Chart */}
         <div className={isAuthenticated ? 'lg:col-span-2' : 'lg:col-span-3'}>
           <MilkProductionChart milkRecords={milkRecords} />
         </div>
       </div>
+
+      {/* 30-Day Trend Chart */}
+      <MilkProductionTrendChart milkRecords={milkRecords} />
 
       {/* Filter + Table */}
       <Card>
@@ -204,6 +213,16 @@ export default function MilkProduction() {
                 className="w-36 h-8 text-sm"
                 placeholder="To"
               />
+              {(filterStart || filterEnd) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="h-8 text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
