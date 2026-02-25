@@ -1,0 +1,157 @@
+{
+  "kind": "build_request",
+  "title": "Add Monthly Reports Page",
+  "projectName": "AO Farms",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-16",
+      "text": "Add a backend method `getDeliveryRecordsByMonth(month: Nat, year: Nat)` to the main Motoko actor that returns all DeliveryRecord entries whose date falls within the specified month and year. Also add a backend method `getMilkRecordsByMonth(month: Nat, year: Nat)` that returns all milk production records for the specified month and year.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "add monthly report page with all of the above"
+        ]
+      },
+      "acceptanceCriteria": [
+        "getDeliveryRecordsByMonth returns only records whose date matches the given month and year",
+        "getMilkRecordsByMonth returns only milk production records matching the given month and year",
+        "Both methods are exposed as query or update calls on the main actor"
+      ]
+    },
+    {
+      "id": "REQ-17",
+      "text": "Add React Query hooks in `frontend/src/hooks/useQueries.ts` for the two new backend methods: one to fetch delivery records by month/year and one to fetch milk production records by month/year.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "add monthly report page with all of the above"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A hook exists for fetching delivery records filtered by month and year",
+        "A hook exists for fetching milk production records filtered by month and year",
+        "Hooks use the existing actor pattern from useQueries.ts"
+      ]
+    },
+    {
+      "id": "REQ-18",
+      "text": "Create a new Monthly Reports page at route `/reports` in `frontend/src/App.tsx`. The page must include a month/year selector (defaulting to the current month and year). It must contain two sections: (1) Monthly Delivery Report and (2) Monthly Milk Production Report.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "add monthly report page with all of the above"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Route /reports renders the Monthly Reports page",
+        "Page has a month and year selector defaulting to the current month/year",
+        "Changing the month/year selector refreshes all report data on the page",
+        "Page is wrapped in the existing Layout component and uses the farm-themed card-based design"
+      ]
+    },
+    {
+      "id": "REQ-19",
+      "text": "In the Monthly Delivery Report section of the Monthly Reports page, display: (1) Summary totals card showing total deliveries count, total missed deliveries count, and total liters delivered for the selected month. (2) A per-customer breakdown table showing each customer's name, total deliveries received, total missed, and total liters. (3) A per-delivery-boy performance table showing each delivery boy's name, total deliveries made, total missed, and total liters delivered.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "Summary totals: total deliveries, total missed, total liters delivered",
+          "Breakdown per customer (total received vs missed)",
+          "Breakdown per delivery boy (performance summary)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Summary totals card shows correct aggregated counts for the selected month",
+        "Per-customer breakdown table shows one row per customer with their delivery stats",
+        "Per-delivery-boy table shows one row per delivery boy with their performance stats",
+        "All data reflects the selected month and year"
+      ]
+    },
+    {
+      "id": "REQ-20",
+      "text": "In the Monthly Milk Production Report section of the Monthly Reports page, display: (1) A summary card showing total liters produced for the selected month. (2) A per-cattle breakdown table showing each cattle's name/ID and total liters produced that month.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "Monthly Milk Production Report",
+          "Total liters produced per month",
+          "Per-cattle breakdown"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Summary card shows total milk production in liters for the selected month",
+        "Per-cattle breakdown table shows one row per cattle with total liters for the month",
+        "Data updates when the month/year selector changes"
+      ]
+    },
+    {
+      "id": "REQ-21",
+      "text": "Add a print-friendly view to the Monthly Reports page. Include a 'Print Report' button that triggers `window.print()`. Apply print-specific CSS so that the navigation bar, month/year selector, and action buttons are hidden when printing, and the report content (both delivery and milk production sections) is rendered cleanly in black and white for printing.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "Print-friendly view"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A 'Print Report' button is visible on the page",
+        "Clicking the button triggers the browser print dialog",
+        "When printing, navigation bar and interactive controls are hidden",
+        "Report tables and summary cards are fully visible and legible in the printed output"
+      ]
+    },
+    {
+      "id": "REQ-22",
+      "text": "Add a 'Reports' navigation link to the existing Layout component's top navigation bar (both desktop and mobile hamburger menu variants), pointing to the `/reports` route. Position it alongside the existing Dashboard, Cattle, Milk Production, Inventory, Customers, and Deliveries links.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "add monthly report page with all of the above"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A 'Reports' link appears in the desktop navigation bar",
+        "A 'Reports' link appears in the mobile hamburger menu",
+        "Clicking the link navigates to /reports",
+        "Active state styling matches the existing nav link pattern"
+      ]
+    }
+  ],
+  "constraints": [
+    "All Motoko logic must remain in backend/main.mo as a single actor",
+    "Do not modify any files listed in frontend.immutablePaths",
+    "New pages must use the existing farm-themed design system (warm greens and ambers, card-based layout) consistent with all other pages"
+  ],
+  "nonGoals": [
+    "Sending notifications (SMS, email, push) to customers",
+    "Exporting reports to PDF or CSV files",
+    "Adding new cattle or delivery data from within the reports page",
+    "Real-time data updates or WebSocket integration"
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

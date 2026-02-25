@@ -1,0 +1,38 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-25T11:44:52.546Z",
+  "summary": "All seven requirements (REQ-16 through REQ-22) appear to be substantially implemented in the diff. The backend adds the two new query methods, the frontend hooks file adds the two new hooks, App.tsx registers the /reports route, Layout.tsx adds the Reports nav link for both desktop and mobile, MonthlyReports.tsx implements the full page with delivery and milk sections, print CSS is added to index.css, and the Print Report button is present. One partial concern exists: the milk production report section in MonthlyReports.tsx shows a dated records table per the file summary rather than strictly a per-cattle breakdown table.",
+  "missing_requirements": [
+    {
+      "id": "REQ-20",
+      "requirement": "Per-cattle breakdown table showing each cattle's name/ID and total liters produced that month",
+      "reason": "The file summary for MonthlyReports.tsx describes the milk production section as having 'a dated records table' rather than a per-cattle breakdown table aggregated by cattle name/ID. The spec requires one row per cattle with total liters for the month, but the description suggests a date-based table instead.",
+      "evidence": [
+        "frontend/src/pages/MonthlyReports.tsx",
+        "frontend-file-summaries.txt"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Delivery-boy performance table includes a success rate column",
+      "reason": "REQ-19 only requests delivery boy name, total deliveries made, total missed, and total liters delivered. The file summary explicitly mentions a success rate metric in the delivery-boy performance table, which was not requested in the spec.",
+      "evidence": [
+        "frontend-file-summaries.txt",
+        "frontend/src/pages/MonthlyReports.tsx"
+      ]
+    }
+  ],
+  "confidence": 0.72,
+  "changed_files": [
+    "backend/main.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/App.tsx",
+    "frontend/src/components/Layout.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/index.css",
+    "frontend/src/pages/MonthlyReports.tsx",
+    "project_state.json"
+  ]
+}

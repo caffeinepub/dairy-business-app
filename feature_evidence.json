@@ -1,0 +1,121 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-add-react-query-hooks-in-frontend-src-hooks-usequeries-ts-for-the-two-new-backend-methods-one-to-fetch-delivery-records-by-month-year-and-one-to-fetch-milk-production-records-by-month-year",
+      "featureTitle": "Add React Query hooks in `frontend/src/hooks/useQueries.ts` for the two new backend methods: one to fetch delivery records by month/year and one to fetch milk production records by month/year.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-17"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-create-a-new-monthly-reports-page-at-route-reports-in-frontend-src-app-tsx-the-page-must-include-a-month-year-selector-defaulting-to-the-current-month-and-year-it-must-contain-two-sections-1-monthly-delivery-report-and-2-monthly-milk-production-report",
+      "featureTitle": "Create a new Monthly Reports page at route `/reports` in `frontend/src/App.tsx`. The page must include a month/year selector (defaulting to the current month and year). It must contain two sections: (1) Monthly Delivery Report and (2) Monthly Milk Production Report.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/pages/MonthlyReports.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-18"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-the-monthly-delivery-report-section-of-the-monthly-reports-page-display-1-summary-totals-card-showing-total-deliveries-count-total-missed-deliveries-count-and-total-liters-delivered-for-the-selected-month-2-a-per-customer-breakdown-table-showing-each-customer-s-name-total-deliveries-received-total-missed-and-total-liters-3-a-per-delivery-boy-performance-table-showing-each-delivery-boy-s-name-total-deliveries-made-total-missed-and-total-liters-delivered",
+      "featureTitle": "In the Monthly Delivery Report section of the Monthly Reports page, display: (1) Summary totals card showing total deliveries count, total missed deliveries count, and total liters delivered for the selected month. (2) A per-customer breakdown table showing each customer's name, total deliveries received, total missed, and total liters. (3) A per-delivery-boy performance table showing each delivery boy's name, total deliveries made, total missed, and total liters delivered.",
+      "files": [
+        "frontend/src/pages/MonthlyReports.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-19"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-the-monthly-milk-production-report-section-of-the-monthly-reports-page-display-1-a-summary-card-showing-total-liters-produced-for-the-selected-month-2-a-per-cattle-breakdown-table-showing-each-cattle-s-name-id-and-total-liters-produced-that-month",
+      "featureTitle": "In the Monthly Milk Production Report section of the Monthly Reports page, display: (1) A summary card showing total liters produced for the selected month. (2) A per-cattle breakdown table showing each cattle's name/ID and total liters produced that month.",
+      "files": [
+        "frontend/src/pages/MonthlyReports.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-20"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-print-friendly-view-to-the-monthly-reports-page-include-a-print-report-button-that-triggers-window-print-apply-print-specific-css-so-that-the-navigation-bar-month-year-selector-and-action-buttons-are-hidden-when-printing-and-the-report-content-both-delivery-and-milk-production-sections-is-rendered-cleanly-in-black-and-white-for-printing",
+      "featureTitle": "Add a print-friendly view to the Monthly Reports page. Include a 'Print Report' button that triggers `window.print()`. Apply print-specific CSS so that the navigation bar, month/year selector, and action buttons are hidden when printing, and the report content (both delivery and milk production sections) is rendered cleanly in black and white for printing.",
+      "files": [
+        "frontend/src/index.css",
+        "frontend/src/pages/MonthlyReports.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-21"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-reports-navigation-link-to-the-existing-layout-component-s-top-navigation-bar-both-desktop-and-mobile-hamburger-menu-variants-pointing-to-the-reports-route-position-it-alongside-the-existing-dashboard-cattle-milk-production-inventory-customers-and-deliveries-links",
+      "featureTitle": "Add a 'Reports' navigation link to the existing Layout component's top navigation bar (both desktop and mobile hamburger menu variants), pointing to the `/reports` route. Position it alongside the existing Dashboard, Cattle, Milk Production, Inventory, Customers, and Deliveries links.",
+      "files": [
+        "frontend/src/components/Layout.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-22"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

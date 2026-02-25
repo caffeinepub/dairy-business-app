@@ -1,0 +1,222 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 13,
+  "summary": "Dairy business management app for AO Farms. Core features include cattle management, milk production tracking, inventory management, and a dashboard. Features include daily customer delivery reports and a monthly reports page covering deliveries and milk production.",
+  "architectural_notes": [],
+  "known_issues": [],
+  "isFixRequest": false,
+  "existing_features": [
+    {
+      "id": "feature-build-a-dashboard-page-that-shows-a-summary-overview-total-cattle-count-today-s-total-milk-production-liters-and-low-stock-inventory-alerts-display-recent-milk-production-entries-in-a-table",
+      "title": "Build a Dashboard page that shows a summary overview: total cattle count, today's total milk production (liters), and low-stock inventory alerts. Display recent milk production entries in a table.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-a-cattle-management-page-where-users-can-view-a-list-of-all-cattle-add-new-cattle-entries-edit-existing-records-and-mark-cattle-as-active-or-inactive",
+      "title": "Build a Cattle Management page where users can view a list of all cattle, add new cattle entries, edit existing records, and mark cattle as active or inactive.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-a-milk-production-page-where-users-can-log-daily-milk-yield-per-cattle-view-historical-production-records-filterable-by-date-and-see-a-simple-bar-chart-of-production-over-the-last-7-days",
+      "title": "Build a Milk Production page where users can log daily milk yield per cattle, view historical production records filterable by date, and see a simple bar chart of production over the last 7 days.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-build-an-inventory-management-page-where-users-can-track-feed-medicine-and-supplies-users-can-add-new-items-update-quantities-and-view-all-items-in-a-table-with-visual-low-stock-indicators",
+      "title": "Build an Inventory Management page where users can track feed, medicine, and supplies. Users can add new items, update quantities, and view all items in a table with visual low-stock indicators.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-warm-earthy-farm-inspired-visual-theme-throughout-the-app-muted-greens-and-warm-ambers-as-primary-colors-clean-sans-serif-typography-card-based-layout-for-content-sections-and-a-top-navigation-bar-with-app-logo-and-page-links-enforce-this-design-consistently-across-all-pages",
+      "title": "Apply a warm, earthy farm-inspired visual theme throughout the app: muted greens and warm ambers as primary colors, clean sans-serif typography, card-based layout for content sections, and a top navigation bar with app logo and page links. Enforce this design consistently across all pages.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-render-the-generated-static-image-assets-logo-hero-illustration-from-frontend-public-assets-generated-in-the-appropriate-ui-locations",
+      "title": "Render the generated static image assets (logo, hero illustration) from frontend/public/assets/generated in the appropriate UI locations.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-customer-management-page-at-route-customers-where-users-can-add-new-customers-name-address-phone-and-view-a-table-of-all-customers-with-their-active-inactive-status-include-add-and-edit-dialogs-consistent-with-the-existing-cattlemanagement-page-pattern",
+      "title": "Create a Customer Management page at route /customers where users can add new customers (name, address, phone) and view a table of all customers with their active/inactive status. Include add and edit dialogs consistent with the existing CattleManagement page pattern.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-daily-delivery-report-page-at-route-deliveries-where-a-delivery-boy-can-log-a-milk-delivery-to-a-customer-select-customer-from-dropdown-enter-delivery-boy-name-quantity-in-liters-status-delivered-or-missed-optional-notes-and-date-defaulting-to-today-the-page-also-displays-a-report-table-of-all-deliveries-for-the-selected-date-showing-customer-name-delivery-boy-quantity-status-and-notes",
+      "title": "Create a Daily Delivery Report page at route /deliveries where a delivery boy can log a milk delivery to a customer (select customer from dropdown, enter delivery boy name, quantity in liters, status: delivered or missed, optional notes, and date defaulting to today). The page also displays a report table of all deliveries for the selected date, showing customer name, delivery boy, quantity, status, and notes.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-navigation-links-for-customers-and-deliveries-to-the-existing-top-navigation-bar-in-the-layout-component-alongside-the-existing-dashboard-cattle-milk-production-and-inventory-links-ensure-both-desktop-and-mobile-hamburger-menu-variants-include-the-new-links",
+      "title": "Add navigation links for 'Customers' and 'Deliveries' to the existing top navigation bar in the Layout component, alongside the existing Dashboard, Cattle, Milk Production, and Inventory links. Ensure both desktop and mobile (hamburger) menu variants include the new links.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-dashboard-page-to-include-a-summary-card-showing-today-s-total-deliveries-count-and-a-count-of-missed-deliveries-for-the-day-add-the-ao-farms-dairy-name-prominently-in-the-top-navigation-bar-or-page-header",
+      "title": "Update the Dashboard page to include a summary card showing today's total deliveries count and a count of missed deliveries for the day. Add the AO Farms dairy name prominently in the top navigation bar or page header.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-the-existing-logo-branding-in-the-top-navigation-bar-with-the-uploaded-ao-farms-company-logo-image-ao-farms-logo-dim-320x160-png-stored-at-frontend-public-assets-generated-ao-farms-logo-dim-320x160-png-display-the-logo-image-in-the-layout-component-s-navigation-bar-where-the-current-text-or-placeholder-logo-appears-ensuring-it-is-appropriately-sized-for-both-desktop-and-mobile-viewports",
+      "title": "Replace the existing logo/branding in the top navigation bar with the uploaded AO Farms company logo image (ao-farms-logo.dim_320x160.png) stored at frontend/public/assets/generated/ao-farms-logo.dim_320x160.png. Display the logo image in the Layout component's navigation bar where the current text or placeholder logo appears, ensuring it is appropriately sized for both desktop and mobile viewports.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-layout-component-s-navigation-bar-restore-the-ao-farms-logo-image-frontend-public-assets-generated-ao-farms-logo-dim-320x160-png-as-the-primary-and-only-branding-element-ensure-it-is-rendered-as-an-img-tag-linking-to-the-home-route-sized-appropriately-for-both-desktop-max-height-48px-and-mobile-viewports-and-that-no-conflicting-text-logo-or-placeholder-remains-visible-alongside-it",
+      "title": "In the Layout component's navigation bar, restore the AO Farms logo image (frontend/public/assets/generated/ao-farms-logo.dim_320x160.png) as the primary and only branding element. Ensure it is rendered as an <img> tag linking to the home route, sized appropriately for both desktop (max height ~48px) and mobile viewports, and that no conflicting text logo or placeholder remains visible alongside it.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-layout-component-s-navigation-bar-increase-the-displayed-size-of-the-ao-farms-logo-image-frontend-public-assets-generated-ao-farms-logo-dim-320x160-png-the-logo-should-be-noticeably-larger-and-more-prominent-increase-the-max-height-to-approximately-64px-on-desktop-and-48px-on-mobile-while-maintaining-aspect-ratio-ensure-no-other-branding-text-or-placeholder-appears-alongside-it",
+      "title": "In the Layout component's navigation bar, increase the displayed size of the AO Farms logo image (frontend/public/assets/generated/ao-farms-logo.dim_320x160.png). The logo should be noticeably larger and more prominent — increase the max-height to approximately 64px on desktop and 48px on mobile, while maintaining aspect ratio. Ensure no other branding text or placeholder appears alongside it.",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-react-query-hooks-in-frontend-src-hooks-usequeries-ts-for-the-two-new-backend-methods-one-to-fetch-delivery-records-by-month-year-and-one-to-fetch-milk-production-records-by-month-year",
+      "title": "Add React Query hooks in `frontend/src/hooks/useQueries.ts` for the two new backend methods: one to fetch delivery records by month/year and one to fetch milk production records by month/year.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-new-monthly-reports-page-at-route-reports-in-frontend-src-app-tsx-the-page-must-include-a-month-year-selector-defaulting-to-the-current-month-and-year-it-must-contain-two-sections-1-monthly-delivery-report-and-2-monthly-milk-production-report",
+      "title": "Create a new Monthly Reports page at route `/reports` in `frontend/src/App.tsx`. The page must include a month/year selector (defaulting to the current month and year). It must contain two sections: (1) Monthly Delivery Report and (2) Monthly Milk Production Report.",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-monthly-delivery-report-section-of-the-monthly-reports-page-display-1-summary-totals-card-showing-total-deliveries-count-total-missed-deliveries-count-and-total-liters-delivered-for-the-selected-month-2-a-per-customer-breakdown-table-showing-each-customer-s-name-total-deliveries-received-total-missed-and-total-liters-3-a-per-delivery-boy-performance-table-showing-each-delivery-boy-s-name-total-deliveries-made-total-missed-and-total-liters-delivered",
+      "title": "In the Monthly Delivery Report section of the Monthly Reports page, display: (1) Summary totals card showing total deliveries count, total missed deliveries count, and total liters delivered for the selected month. (2) A per-customer breakdown table showing each customer's name, total deliveries received, total missed, and total liters. (3) A per-delivery-boy performance table showing each delivery boy's name, total deliveries made, total missed, and total liters delivered.",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-monthly-milk-production-report-section-of-the-monthly-reports-page-display-1-a-summary-card-showing-total-liters-produced-for-the-selected-month-2-a-per-cattle-breakdown-table-showing-each-cattle-s-name-id-and-total-liters-produced-that-month",
+      "title": "In the Monthly Milk Production Report section of the Monthly Reports page, display: (1) A summary card showing total liters produced for the selected month. (2) A per-cattle breakdown table showing each cattle's name/ID and total liters produced that month.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-print-friendly-view-to-the-monthly-reports-page-include-a-print-report-button-that-triggers-window-print-apply-print-specific-css-so-that-the-navigation-bar-month-year-selector-and-action-buttons-are-hidden-when-printing-and-the-report-content-both-delivery-and-milk-production-sections-is-rendered-cleanly-in-black-and-white-for-printing",
+      "title": "Add a print-friendly view to the Monthly Reports page. Include a 'Print Report' button that triggers `window.print()`. Apply print-specific CSS so that the navigation bar, month/year selector, and action buttons are hidden when printing, and the report content (both delivery and milk production sections) is rendered cleanly in black and white for printing.",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-reports-navigation-link-to-the-existing-layout-component-s-top-navigation-bar-both-desktop-and-mobile-hamburger-menu-variants-pointing-to-the-reports-route-position-it-alongside-the-existing-dashboard-cattle-milk-production-inventory-customers-and-deliveries-links",
+      "title": "Add a 'Reports' navigation link to the existing Layout component's top navigation bar (both desktop and mobile hamburger menu variants), pointing to the `/reports` route. Position it alongside the existing Dashboard, Cattle, Milk Production, Inventory, Customers, and Deliveries links.",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Create a backend data model and actor to manage core dairy business entities: Cattle (id, name, breed, birthDate, status), Milk Production records (id, cattleId, date, quantity in liters, notes), and Inventory items (id, name, category, quantity, unit, lastUpdated).",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Add a Daily Customer Delivery Report feature where delivery boys can log milk deliveries to customers, and managers can view a daily report of all deliveries made to customer doors.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Create a backend data model and API for Customer Delivery Reports. Add a Customer record type (id, name, address, phone, activeStatus) and a DeliveryRecord type (id, customerId, deliveryBoyName, date, quantityLiters, status: 'delivered' | 'missed', notes). Expose actor methods: addCustomer, updateCustomer, getCustomers, addDeliveryRecord, getDeliveryRecordsByDate, getDeliveryRecordsByCustomer.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Add the user's uploaded company logo to the app, replacing or updating the existing logo/branding in the navigation bar and relevant UI locations.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Fix the logo in the navigation bar — the logo was changed and is not displaying as the main/primary logo. Restore or correct the AO Farms logo placement so it appears prominently as the main branding element.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Increase the size of the AO Farms logo in the navigation bar — the current logo appears too small and needs to be made larger/more prominent.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Add a Monthly Reports page with: delivery report filtered by month/year (summary totals: deliveries, missed, liters delivered; per-customer breakdown; per-delivery-boy performance summary; print-friendly view) and monthly milk production report (total liters per month, per-cattle breakdown).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Add a backend method `getDeliveryRecordsByMonth(month: Nat, year: Nat)` to the main Motoko actor that returns all DeliveryRecord entries whose date falls within the specified month and year. Also add a backend method `getMilkRecordsByMonth(month: Nat, year: Nat)` that returns all milk production records for the specified month and year.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Dairy Business App",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}
