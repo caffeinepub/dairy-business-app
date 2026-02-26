@@ -55,6 +55,7 @@ export enum HealthStatus {
     Recovered = "Recovered"
 }
 export enum LoginError {
+    AccessDenied = "AccessDenied",
     AccountNotFound = "AccountNotFound",
     InvalidCredentials = "InvalidCredentials",
     AccountInactive = "AccountInactive"
@@ -74,6 +75,7 @@ export enum UserRole {
 export interface backendInterface {
     addCattle(tagNumber: string, breed: string, dateOfPurchase: bigint, milkingCapacity: number, purchasePrice: number, availability: CattleAvailability, healthStatus: HealthStatus): Promise<bigint>;
     addCustomer(name: string, phone: string, address: string, username: string, passwordHash: string, isActive: boolean): Promise<bigint>;
+    adminLogin(): Promise<LoginResult>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     customerLogin(username: string, password: string): Promise<LoginResult>;
     deleteCattle(cattleId: bigint): Promise<void>;

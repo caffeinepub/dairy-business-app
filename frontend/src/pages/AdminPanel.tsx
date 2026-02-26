@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +12,8 @@ import AdminOrdersDeliveries from '../components/AdminOrdersDeliveries';
 import { Loader2, LogOut, ShieldCheck, Beef, Users, Package } from 'lucide-react';
 
 export default function AdminPanel() {
-  const { login, clear, loginStatus, identity } = useInternetIdentity();
+  const navigate = useNavigate();
+  const { clear, identity } = useInternetIdentity();
   const { actor, isFetching: actorFetching } = useActor();
   const qc = useQueryClient();
   const isAuthenticated = !!identity;
@@ -25,61 +27,21 @@ export default function AdminPanel() {
     enabled: !!actor && !actorFetching && isAuthenticated,
   });
 
-  const handleLogin = async () => {
-    try {
-      await login();
-    } catch (e: any) {
-      if (e?.message === 'User is already authenticated') {
-        await clear();
-        setTimeout(() => login(), 300);
-      }
-    }
-  };
-
   const handleLogout = async () => {
     await clear();
     qc.clear();
+    navigate({ to: '/admin-login' });
   };
 
-  const isLoggingIn = loginStatus === 'logging-in';
   const isChecking = actorFetching || adminLoading;
 
+  // Not authenticated — redirect to admin login
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-admin-bg to-admin-bg/80 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-xl border-border">
-          <CardContent className="pt-8 pb-8 px-8 flex flex-col items-center gap-6">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <ShieldCheck className="h-8 w-8 text-primary" />
-              </div>
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-admin-dark">Admin Panel</h1>
-                <p className="text-muted-foreground text-sm mt-1">AO Farms Management System</p>
-              </div>
-            </div>
-            <div className="w-full space-y-3">
-              <p className="text-sm text-center text-muted-foreground">
-                Sign in with your admin credentials to access the management panel.
-              </p>
-              <Button
-                onClick={handleLogin}
-                disabled={isLoggingIn}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-11 text-base"
-              >
-                {isLoggingIn ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Signing in...</>
-                ) : (
-                  'Sign In as Admin'
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    navigate({ to: '/admin-login' });
+    return null;
   }
 
+  // Checking admin status
   if (isChecking) {
     return (
       <div className="min-h-screen bg-admin-bg flex items-center justify-center">
@@ -91,6 +53,7 @@ export default function AdminPanel() {
     );
   }
 
+  // Not admin
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-admin-bg flex items-center justify-center p-4">

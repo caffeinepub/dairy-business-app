@@ -1,16 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Build a full Cattle & Customer Management System with separate Admin Panel and Customer Portal, backed by a Motoko canister handling cattle records, customer accounts, authentication, and orders.
+**Goal:** Split the single login page into a selection screen with separate Admin and Customer login entry points, and update routing to protect each portal accordingly.
 
 **Planned changes:**
-- Add backend Motoko actor with CRUD for Cattle records (tagNumber, breed, dateOfPurchase, milkingCapacity, purchasePrice, availability, healthStatus), admin-only mutations
-- Add backend CRUD for Customer accounts (name, phone, address, username, passwordHash, isActive), admin-only
-- Add backend `customerLogin(username, password)` function returning a session token; rejects inactive or unknown accounts
-- Add backend Order management (placeOrder for customers, updateOrderStatus/getAllOrders for admin, getMyOrders for customers)
-- Build Admin Panel frontend at `/admin` with protected login and three sections: Cattle Management table, Customer Management table, and Orders & Deliveries table with status update controls
-- Build Customer Portal frontend at `/portal` with username/password login, Place Order tab (available cattle by tag/breed), and My Deliveries tab (own orders with status badges)
-- Block inactive or non-existent customers from portal access with a clear "Access denied" message
-- Apply consistent green-and-white professional theme with earthy accents across both portals; admin panel is data-dense, customer portal is simple and friendly
+- Add a new login selection landing page at `/` with two clearly labeled buttons: "Admin Login" and "Customer Login"
+- Create a dedicated Admin Login page using Internet Identity authentication, with backend `isAdmin` role verification and redirect to the admin dashboard on success; show an error for non-admin principals
+- Create a dedicated Customer Login page with username and password fields, authenticating via the backend `loginCustomer` call and redirecting to the customer portal on success
+- Update app routing so `/` renders the login selection page, admin routes redirect unauthenticated/non-admin users to the admin login page, and customer portal routes redirect unauthenticated customers to the customer login page
 
-**User-visible outcome:** Admins can log in to manage cattle inventory, customer accounts, and track/update orders. Customers can log in (with admin-created credentials) to place orders and view their delivery statuses.
+**User-visible outcome:** Users visiting the app first see a selection screen to choose Admin or Customer login. Each portal has its own login flow with proper authentication and route protection, preventing unauthorized access to either dashboard.

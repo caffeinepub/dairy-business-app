@@ -3,6 +3,9 @@ import { RouterProvider, createRouter, createRoute, createRootRoute, Outlet } fr
 import { Toaster } from '@/components/ui/sonner';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import Layout from './components/Layout';
+import LoginSelection from './pages/LoginSelection';
+import AdminLogin from './pages/AdminLogin';
+import CustomerLogin from './pages/CustomerLogin';
 import Dashboard from './pages/Dashboard';
 import CattleManagement from './pages/CattleManagement';
 import MilkProduction from './pages/MilkProduction';
@@ -26,6 +29,38 @@ const rootRoute = createRootRoute({
   component: () => <Outlet />,
 });
 
+// Public standalone routes (no layout)
+const loginSelectionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: LoginSelection,
+});
+
+const adminLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin-login',
+  component: AdminLogin,
+});
+
+const customerLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customer-login',
+  component: CustomerLogin,
+});
+
+const portalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/portal',
+  component: CustomerPortal,
+});
+
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  component: AdminPanel,
+});
+
+// Admin layout routes
 const layoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'layout',
@@ -34,7 +69,7 @@ const layoutRoute = createRoute({
 
 const dashboardRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: '/',
+  path: '/dashboard',
   component: Dashboard,
 });
 
@@ -74,19 +109,12 @@ const reportsRoute = createRoute({
   component: MonthlyReports,
 });
 
-const portalRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/portal',
-  component: CustomerPortal,
-});
-
-const adminRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/admin',
-  component: AdminPanel,
-});
-
 const routeTree = rootRoute.addChildren([
+  loginSelectionRoute,
+  adminLoginRoute,
+  customerLoginRoute,
+  portalRoute,
+  adminRoute,
   layoutRoute.addChildren([
     dashboardRoute,
     cattleRoute,
@@ -96,8 +124,6 @@ const routeTree = rootRoute.addChildren([
     deliveriesRoute,
     reportsRoute,
   ]),
-  portalRoute,
-  adminRoute,
 ]);
 
 const router = createRouter({ routeTree });

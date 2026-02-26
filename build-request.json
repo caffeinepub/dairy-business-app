@@ -1,153 +1,104 @@
 {
   "kind": "build_request",
-  "title": "Cattle & Customer Management System — Full Rebuild with Admin and Customer Portals",
-  "projectName": "Cattle Manager",
+  "title": "Split login page into separate Admin and Customer entry points",
+  "projectName": "AO Farms Portal",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Implement a backend data model and CRUD operations for Cattle records with the following fields: tagNumber (Text), breed (Text), dateOfPurchase (Int/timestamp), milkingCapacity (Float, litres/day), purchasePrice (Float), availability (variant: Available | Sold | Reserved), healthStatus (variant: Healthy | Sick | Recovered). Expose addCattle, updateCattle, deleteCattle, and getAllCattle functions. Only the admin principal can call mutating functions.",
-      "target": "backend",
+      "text": "Create a dedicated landing/login selection page that presents two clearly labeled entry points: 'Admin Login' and 'Customer Login', allowing users to choose their portal before proceeding.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-8",
-          "msg-10",
-          "msg-14"
+          "msg-6",
+          "msg-8"
+        ],
+        "quotes": [
+          "we just create before that on login page here we have to split one admin and customer page"
         ]
       },
       "acceptanceCriteria": [
-        "Admin can add a cattle record with all seven required fields",
-        "Admin can edit any field of an existing cattle record",
-        "Admin can delete a cattle record by ID",
-        "All cattle records are returned via getAllCattle",
-        "Non-admin callers receive an authorization error on mutating calls"
+        "A login selection page is shown as the default landing route",
+        "Two distinct buttons or sections are visible: one for Admin and one for Customer",
+        "Clicking 'Admin Login' navigates to the admin authentication flow",
+        "Clicking 'Customer Login' navigates to the customer portal login form"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Implement a backend data model and CRUD operations for Customer accounts with fields: name (Text), phone (Text), address (Text), username (Text, unique login credential), passwordHash (Text), isActive (Bool). Expose addCustomer, updateCustomer, deleteCustomer, setCustomerActive, and getAllCustomers functions. Only the admin principal can call these functions.",
-      "target": "backend",
+      "text": "Restore the working admin login flow from Version 28: the Admin login page must use Internet Identity authentication, verify admin role via the backend actor, and redirect to the admin dashboard on success. Display a clear error if the authenticated principal is not an admin.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-8",
-          "msg-12",
-          "msg-14"
+          "msg-6",
+          "msg-8"
+        ],
+        "quotes": [
+          "please understand version 28 is everything is ok that is admin login",
+          "Keep the existing admin login flow as it was in Version 28"
         ]
       },
       "acceptanceCriteria": [
-        "Admin can add a new customer with all required fields",
-        "Admin can edit customer details",
-        "Admin can delete a customer account",
-        "Admin can toggle a customer's isActive status",
-        "getAllCustomers returns all customer records to the admin"
+        "Admin Login page shows an Internet Identity login button",
+        "After authentication, the backend isAdmin check is called",
+        "Successful admin authentication redirects to the admin dashboard",
+        "Non-admin principals see a clear 'Access denied' or 'Not authorized' message",
+        "Admin session persists across page refreshes"
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Implement customer authentication backend logic: a customerLogin(username, password) function that checks credentials against stored customer accounts, returns a session token or error if the account does not exist or isActive is false. Inactive and non-existent customers must be explicitly rejected with a clear error variant.",
-      "target": "backend",
+      "text": "Create a dedicated Customer Login page where customers authenticate using their username and password credentials managed in the backend CustomerAccount store. On success, store the customer session and redirect to the Customer Portal.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-12",
-          "msg-14"
+          "msg-6",
+          "msg-8"
+        ],
+        "quotes": [
+          "we just create before that on login page here we have to split one admin and customer page"
         ]
       },
       "acceptanceCriteria": [
-        "customerLogin succeeds for admin-created, active customers with correct credentials",
-        "customerLogin returns an error for unknown usernames",
-        "customerLogin returns an error for inactive customers even if credentials are correct",
-        "customerLogin returns an error for incorrect passwords"
+        "Customer Login page displays username and password input fields",
+        "Submitting valid credentials authenticates the customer via the backend loginCustomer call",
+        "Successful login stores the customer session (via CustomerAuthContext) and redirects to the customer portal",
+        "Invalid credentials display a user-friendly error message",
+        "Customer session persists in sessionStorage across page refreshes"
       ]
     },
     {
       "id": "REQ-4",
-      "text": "Implement backend Order management: Order record with fields orderId (Nat), customerId (Nat), cattleTagNumber (Text), orderDate (Int), status (variant: Pending | Confirmed | OutForDelivery | Delivered | Cancelled), deliveryNotes (Text). Expose placeOrder (customer-callable, only for own orders), updateOrderStatus (admin-callable), getAllOrders (admin-callable), getMyOrders (customer-callable, returns only the caller's orders).",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-10",
-          "msg-14"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Authenticated active customers can place orders",
-        "Admin can view all orders",
-        "Admin can update order status through all status variants",
-        "Customers can only view their own orders via getMyOrders",
-        "Order records persist across canister upgrades"
-      ]
-    },
-    {
-      "id": "REQ-5",
-      "text": "Build the Admin Panel frontend with a protected login screen (username/password). After login, provide navigation to three sections: (1) Cattle Management — table listing all cattle with tag number, breed, date of purchase, milking capacity, purchase price, availability, health status, and action buttons for add/edit/delete; (2) Customer Management — table listing all customers with name, phone, address, active/inactive status toggle, and add/edit/delete actions; (3) Orders & Deliveries — table of all orders with customer name, cattle tag, order date, status, and ability to update delivery status.",
+      "text": "Update the app routing so that the root path ('/') renders the new login selection page. Protect the admin panel routes to redirect unauthenticated or non-admin users back to the admin login page. Protect the customer portal route to redirect unauthenticated customers back to the customer login page.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-8",
-          "msg-10",
-          "msg-14"
+          "msg-6",
+          "msg-8"
+        ],
+        "quotes": [
+          "Add a separate Customer login section or page",
+          "The main login page should clearly separate Admin vs. Customer access"
         ]
       },
       "acceptanceCriteria": [
-        "Admin login screen is shown to unauthenticated users navigating to /admin",
-        "Correct admin credentials grant access to the admin panel",
-        "Cattle table displays all fields and supports add/edit/delete via dialogs",
-        "Customer table supports add/edit/delete and active/inactive toggle",
-        "Orders table displays all orders and allows status updates",
-        "Admin is redirected to login on logout or session expiry"
-      ]
-    },
-    {
-      "id": "REQ-6",
-      "text": "Build the Customer Portal frontend at /portal with a username/password login form. After successful login, show two tabs: (1) Place Order — allows the customer to submit a new order by selecting available cattle (shown by tag number and breed) and entering delivery notes; (2) My Deliveries — lists the customer's own orders with status badges (Pending, Confirmed, Out for Delivery, Delivered, Cancelled) and delivery notes. Block access entirely for inactive or non-existent customer accounts and show a clear 'Access denied' message.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-10",
-          "msg-12",
-          "msg-14"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Customer login form is shown at /portal for unauthenticated users",
-        "Active, admin-created customers can log in with correct credentials",
-        "Inactive customers see an 'Access denied / account inactive' message after login attempt",
-        "Place Order tab shows available cattle and submits an order",
-        "My Deliveries tab shows only the logged-in customer's orders with current statuses",
-        "Customers cannot access cattle inventory details beyond tag number and breed for ordering"
-      ]
-    },
-    {
-      "id": "REQ-7",
-      "text": "Apply a consistent visual theme across both the Admin Panel and Customer Portal: use a clean, professional green-and-white color palette with earthy accent tones, clear typography, and card-based layouts. Admin panel should feel authoritative and data-dense; customer portal should feel friendly and simple.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-14"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Color palette is applied consistently across all pages",
-        "Admin panel and customer portal share a coherent but role-appropriate visual style",
-        "All tables, forms, and dialogs use the defined theme"
+        "Navigating to '/' shows the login selection page",
+        "Navigating directly to an admin route without authentication redirects to admin login",
+        "Navigating directly to the customer portal without a customer session redirects to customer login",
+        "Both portals are fully inaccessible without proper authentication"
       ]
     }
   ],
   "constraints": [
-    "All Motoko logic must remain in a single main actor (backend/main.mo)",
-    "Do not use Internet Identity for customer authentication — use username/password stored in the canister",
-    "Customers must not be able to self-register; only admin-created accounts are valid",
-    "Inactive customers must be blocked from all customer portal access",
-    "Immutable frontend paths (hooks, main.tsx, ui components) must not be modified"
+    "Do not change the backend authentication logic or data model for admin or customer accounts",
+    "Preserve the CustomerAuthContext session management in frontend/src/context/CustomerAuthContext.tsx",
+    "Do not modify any files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui"
   ],
   "nonGoals": [
-    "Social login or Internet Identity for customers",
-    "Customers browsing the full cattle inventory",
-    "Self-registration by customers",
-    "Inventory management (feed, medicine, supplies)",
-    "Milk production tracking",
-    "WhatsApp messaging integration",
-    "Monthly reports or CSV export features"
+    "Adding new admin or customer account types or roles",
+    "Changing the admin dashboard or customer portal feature set beyond fixing login access",
+    "Adding social or third-party authentication methods",
+    "Redesigning the overall visual theme of the app"
   ],
   "imageRequirements": {
     "required": [],

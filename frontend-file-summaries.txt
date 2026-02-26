@@ -2,7 +2,7 @@
   "frontend/src/index.css": "Global stylesheet with green-and-white OKLCH color system including admin-dark, admin-bg, and customer-bg tokens for role-appropriate theming in both light and dark modes.",
   "frontend/tailwind.config.js": "Extended Tailwind config with Nunito/Merriweather fonts, green-and-white color palette, admin-dark/admin-bg/customer-bg tokens, farm color palette, and card shadow utilities.",
   "frontend/src/hooks/useQueries.ts": "Simplified re-export hub that forwards all admin and customer query hooks, plus a standalone useIsAdmin hook for role checking.",
-  "frontend/src/components/Layout.tsx": "App shell with sticky dark-green navigation bar including all admin nav links, Admin Panel link, and a highlighted Customer Portal link, plus a branded footer.",
+  "frontend/src/components/Layout.tsx": "App shell with sticky dark-green navigation bar; updated dashboard link to '/dashboard' and all nav links remain intact with Admin Panel and Customer Portal quick-access links.",
   "frontend/src/components/CattleForm.tsx": "Reusable cattle add/edit form using the new Cattle type with tagNumber, breed, dateOfPurchase, milkingCapacity, purchasePrice, CattleAvailability, and HealthStatus fields.",
   "frontend/src/components/InventoryForm.tsx": "Reusable inventory form component supporting add-item and update-quantity modes; defines the InventoryItem interface locally since the localTypes.ts file was removed.",
   "frontend/src/components/MilkProductionChart.tsx": "Stub component returning a placeholder message since milk records no longer exist in the new backend.",
@@ -10,7 +10,7 @@
   "frontend/src/pages/CattleManagement.tsx": "Full cattle management page with stats cards, sortable table, and add/edit/delete dialogs using the new Cattle type and admin query hooks.",
   "frontend/src/pages/MilkProduction.tsx": "Placeholder page indicating milk production tracking is not available in the current backend version.",
   "frontend/src/pages/InventoryManagement.tsx": "Placeholder page indicating inventory management is not available in the current backend version.",
-  "frontend/src/App.tsx": "Root app component with TanStack Router for nine routes (/, /cattle, /milk, /inventory, /customers, /deliveries, /reports, /portal, /admin), wrapped in QueryClientProvider and CustomerAuthProvider.",
+  "frontend/src/App.tsx": "Root app component with TanStack Router; '/' renders LoginSelection, '/admin-login' renders AdminLogin, '/customer-login' renders CustomerLogin, '/admin' renders AdminPanel, '/portal' renders CustomerPortal, and '/dashboard' plus other admin routes use the Layout shell.",
   "frontend/src/components/CustomerForm.tsx": "Reusable customer add/edit form using the new CustomerAccount type with name, phone, address, username, password, and isActive fields.",
   "frontend/src/pages/CustomerManagement.tsx": "Full customer management page with search, CSV export, stats cards, active/inactive toggle, and add/edit/delete dialogs using CustomerAccount type.",
   "frontend/src/pages/DeliveryReports.tsx": "Delivery reports page that renders the AdminOrdersDeliveries component for order/delivery tracking.",
@@ -29,7 +29,7 @@
   "frontend/src/components/CustomerDeliveryList.tsx": "Customer-facing order list component using CattleOrder type with color-coded OrderStatus badges and empty state.",
   "frontend/src/components/FlaggedFeedbackSection.tsx": "Stub component returning null since flagged feedback is no longer supported in the new backend.",
   "frontend/src/components/ResolveFeedbackDialog.tsx": "Stub component returning null since feedback resolution is no longer supported in the new backend.",
-  "frontend/src/pages/CustomerPortal.tsx": "Customer portal page with username/password login form, session management via CustomerAuthContext, and tabbed interface for placing orders and viewing delivery history.",
+  "frontend/src/pages/CustomerPortal.tsx": "Customer portal page that redirects unauthenticated users to /customer-login; shows tabbed interface for placing orders and viewing delivery history, now correctly passing the required `isLoading` prop to `CustomerMyDeliveries`.",
   "frontend/src/context/CustomerAuthContext.tsx": "React context and provider for customer authentication state, storing session (customerId, username, name, sessionToken) in memory and sessionStorage with login/logout functions and a useCustomerAuth hook.",
   "frontend/src/hooks/useAdminQueries.ts": "TanStack Query hooks for all admin backend operations including cattle CRUD, customer CRUD with active toggle, and order status updates, with toast notifications and query invalidation.",
   "frontend/src/hooks/useCustomerQueries.ts": "TanStack Query mutation hook for customer login that calls actor.customerLogin and maps LoginError variants to user-friendly error messages.",
@@ -38,5 +38,8 @@
   "frontend/src/components/AdminOrdersDeliveries.tsx": "Admin orders and deliveries table showing all orders with customer name resolution, status badges, and an update status dialog with notes textarea.",
   "frontend/src/components/CustomerMyDeliveries.tsx": "Customer-facing deliveries list component displaying the customer's orders in a table with color-coded status badges and empty state.",
   "frontend/src/components/CustomerPlaceOrder.tsx": "Customer order placement component showing available cattle in a select dropdown (tag number and breed only) with delivery notes and order submission.",
-  "frontend/src/pages/AdminPanel.tsx": "Admin panel page with Internet Identity login, admin role verification, and a tabbed interface (Cattle, Customers, Orders & Deliveries) with a dedicated admin header and access denied screen."
+  "frontend/src/pages/AdminPanel.tsx": "Admin panel page that redirects unauthenticated users to /admin-login; shows tabbed management interface (Cattle, Customers, Orders) for verified admins with a sign-out button that redirects back to /admin-login.",
+  "frontend/src/pages/LoginSelection.tsx": "New landing page shown at the root route '/' with two prominent cards — one for Admin Login and one for Customer Login — each navigating to their respective dedicated login pages.",
+  "frontend/src/pages/AdminLogin.tsx": "Dedicated admin login page using Internet Identity authentication; verifies admin role via isCallerAdmin, redirects to /admin on success, and shows an access denied screen for non-admin principals.",
+  "frontend/src/pages/CustomerLogin.tsx": "Dedicated customer login page with username/password form using useCustomerLogin mutation; stores session via CustomerAuthContext and redirects to /portal on success."
 }

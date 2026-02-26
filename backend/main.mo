@@ -4,16 +4,16 @@ import Time "mo:core/Time";
 import Nat "mo:core/Nat";
 import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
-import Migration "migration";
+
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
-(with migration = Migration.run)
+
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  // ─── Types ───────────────────────────────────────────────────────────────────
+  // ─── Types ───────────────────────────────────────────────────────────────
 
   public type UserProfile = {
     name : Text;
@@ -78,9 +78,10 @@ actor {
     #InvalidCredentials;
     #AccountInactive;
     #AccountNotFound;
+    #AccessDenied;
   };
 
-  // ─── State ───────────────────────────────────────────────────────────────────
+  // ─── State ────────────────────────────────────────────────────────────────
 
   let userProfiles = Map.empty<Principal, UserProfile>();
   let cattleRecords = Map.empty<Nat, Cattle>();
@@ -116,7 +117,6 @@ actor {
   };
 
   // ─── Cattle CRUD (admin-only) ───────────────────────────────────────────────
-
   public shared ({ caller }) func addCattle(
     tagNumber : Text,
     breed : Text,
@@ -196,7 +196,6 @@ actor {
   };
 
   // ─── Customer Account CRUD (admin-only) ─────────────────────────────────---
-
   public shared ({ caller }) func addCustomer(
     name : Text,
     phone : Text,
@@ -295,7 +294,6 @@ actor {
   };
 
   // ─── Customer Authentication (public) ─────────────────────────────────--------
-
   public query func customerLogin(username : Text, password : Text) : async LoginResult {
     var found : ?CustomerAccount = null;
     for (c in customerAccounts.values()) {
@@ -317,8 +315,14 @@ actor {
     };
   };
 
-  // ─── Order Management ─────────────────────────────────────────────────────---
+  public query ({ caller }) func adminLogin() : async LoginResult {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      return #err(#AccessDenied);
+    };
+    #ok("admin-session-" # caller.toText());
+  };
 
+  // ─── Order Management ─────────────────────────────────────────────────---
   public shared ({ caller }) func placeOrder(
     customerId : Nat,
     cattleTagNumber : Text,

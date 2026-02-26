@@ -1,37 +1,44 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Cattle & Customer Management System with separate admin and customer portals. Admin manages cattle (tag number, breed, date of purchase, milking capacity, purchase price, availability, health status), customers (add/edit/delete, active/inactive status), and all orders/delivery statuses. Customer portal allows only admin-created, active accounts to log in, place orders, and view their own delivery status. No self-registration allowed.",
+  "summary": "Cattle/customer management platform with admin and customer portals. Version 28 had working admin login. Current goal is to split the login page into two separate entry points — one for Admin and one for Customer — each with their own dedicated portal access.",
   "architectural_notes": [
-    "Separate admin and customer authentication roles; customers can only log in if admin has created their account and set it to active",
-    "No self-registration for customers — all accounts are admin-managed"
+    "Version 28 is the stable baseline with working admin login — use it as reference for admin authentication flow"
   ],
   "known_issues": [
-    "Cattle and customer adding not working in previous build (Version 29)"
+    "Version 30 deployment is missing login credentials/access for both admin and customer portals"
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-build-the-admin-panel-frontend-with-a-protected-login-screen-username-password-after-login-provide-navigation-to-three-sections-1-cattle-management-table-listing-all-cattle-with-tag-number-breed-date-of-purchase-milking-capacity-purchase-price-availability-health-status-and-action-buttons-for-add-edit-delete-2-customer-management-table-listing-all-customers-with-name-phone-address-active-inactive-status-toggle-and-add-edit-delete-actions-3-orders-deliveries-table-of-all-orders-with-customer-name-cattle-tag-order-date-status-and-ability-to-update-delivery-status",
-      "title": "Build the Admin Panel frontend with a protected login screen (username/password). After login, provide navigation to three sections: (1) Cattle Management — table listing all cattle with tag number, breed, date of purchase, milking capacity, purchase price, availability, health status, and action buttons for add/edit/delete; (2) Customer Management — table listing all customers with name, phone, address, active/inactive status toggle, and add/edit/delete actions; (3) Orders & Deliveries — table of all orders with customer name, cattle tag, order date, status, and ability to update delivery status.",
+      "id": "feature-create-a-dedicated-landing-login-selection-page-that-presents-two-clearly-labeled-entry-points-admin-login-and-customer-login-allowing-users-to-choose-their-portal-before-proceeding",
+      "title": "Create a dedicated landing/login selection page that presents two clearly labeled entry points: 'Admin Login' and 'Customer Login', allowing users to choose their portal before proceeding.",
       "reqIds": [
-        "REQ-5"
+        "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-build-the-customer-portal-frontend-at-portal-with-a-username-password-login-form-after-successful-login-show-two-tabs-1-place-order-allows-the-customer-to-submit-a-new-order-by-selecting-available-cattle-shown-by-tag-number-and-breed-and-entering-delivery-notes-2-my-deliveries-lists-the-customer-s-own-orders-with-status-badges-pending-confirmed-out-for-delivery-delivered-cancelled-and-delivery-notes-block-access-entirely-for-inactive-or-non-existent-customer-accounts-and-show-a-clear-access-denied-message",
-      "title": "Build the Customer Portal frontend at /portal with a username/password login form. After successful login, show two tabs: (1) Place Order — allows the customer to submit a new order by selecting available cattle (shown by tag number and breed) and entering delivery notes; (2) My Deliveries — lists the customer's own orders with status badges (Pending, Confirmed, Out for Delivery, Delivered, Cancelled) and delivery notes. Block access entirely for inactive or non-existent customer accounts and show a clear 'Access denied' message.",
+      "id": "feature-restore-the-working-admin-login-flow-from-version-28-the-admin-login-page-must-use-internet-identity-authentication-verify-admin-role-via-the-backend-actor-and-redirect-to-the-admin-dashboard-on-success-display-a-clear-error-if-the-authenticated-principal-is-not-an-admin",
+      "title": "Restore the working admin login flow from Version 28: the Admin login page must use Internet Identity authentication, verify admin role via the backend actor, and redirect to the admin dashboard on success. Display a clear error if the authenticated principal is not an admin.",
       "reqIds": [
-        "REQ-6"
+        "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-apply-a-consistent-visual-theme-across-both-the-admin-panel-and-customer-portal-use-a-clean-professional-green-and-white-color-palette-with-earthy-accent-tones-clear-typography-and-card-based-layouts-admin-panel-should-feel-authoritative-and-data-dense-customer-portal-should-feel-friendly-and-simple",
-      "title": "Apply a consistent visual theme across both the Admin Panel and Customer Portal: use a clean, professional green-and-white color palette with earthy accent tones, clear typography, and card-based layouts. Admin panel should feel authoritative and data-dense; customer portal should feel friendly and simple.",
+      "id": "feature-create-a-dedicated-customer-login-page-where-customers-authenticate-using-their-username-and-password-credentials-managed-in-the-backend-customeraccount-store-on-success-store-the-customer-session-and-redirect-to-the-customer-portal",
+      "title": "Create a dedicated Customer Login page where customers authenticate using their username and password credentials managed in the backend CustomerAccount store. On success, store the customer session and redirect to the Customer Portal.",
       "reqIds": [
-        "REQ-7"
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-app-routing-so-that-the-root-path-renders-the-new-login-selection-page-protect-the-admin-panel-routes-to-redirect-unauthenticated-or-non-admin-users-back-to-the-admin-login-page-protect-the-customer-portal-route-to-redirect-unauthenticated-customers-back-to-the-customer-login-page",
+      "title": "Update the app routing so that the root path ('/') renders the new login selection page. Protect the admin panel routes to redirect unauthenticated or non-admin users back to the admin login page. Protect the customer portal route to redirect unauthenticated customers back to the customer login page.",
+      "reqIds": [
+        "REQ-4"
       ],
       "version": 1
     }
@@ -39,69 +46,13 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Admin login with full cattle management (tag number, breed, date of purchase, milking capacity, purchase price, availability, health status) - add/edit/delete",
+      "summary": "Split login page into separate Admin and Customer entry points, restoring working admin login from Version 28",
       "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Admin customer management - add/edit/delete accounts, set active/inactive status",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-3",
-      "summary": "Admin view and manage all orders and delivery statuses",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-4",
-      "summary": "Customer portal login restricted to admin-created accounts only (no self-registration); inactive customers blocked",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-5",
-      "summary": "Customer portal: place orders for cattle and view own delivery status",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-6",
-      "summary": "Implement a backend data model and CRUD operations for Cattle records with the following fields: tagNumber (Text), breed (Text), dateOfPurchase (Int/timestamp), milkingCapacity (Float, litres/day), purchasePrice (Float), availability (variant: Available | Sold | Reserved), healthStatus (variant: Healthy | Sick | Recovered). Expose addCattle, updateCattle, deleteCattle, and getAllCattle functions. Only the admin principal can call mutating functions.",
-      "reqIds": [
-        "REQ-1"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-7",
-      "summary": "Implement a backend data model and CRUD operations for Customer accounts with fields: name (Text), phone (Text), address (Text), username (Text, unique login credential), passwordHash (Text), isActive (Bool). Expose addCustomer, updateCustomer, deleteCustomer, setCustomerActive, and getAllCustomers functions. Only the admin principal can call these functions.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-8",
-      "summary": "Implement customer authentication backend logic: a customerLogin(username, password) function that checks credentials against stored customer accounts, returns a session token or error if the account does not exist or isActive is false. Inactive and non-existent customers must be explicitly rejected with a clear error variant.",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-9",
-      "summary": "Implement backend Order management: Order record with fields orderId (Nat), customerId (Nat), cattleTagNumber (Text), orderDate (Int), status (variant: Pending | Confirmed | OutForDelivery | Delivered | Cancelled), deliveryNotes (Text). Expose placeOrder (customer-callable, only for own orders), updateOrderStatus (admin-callable), getAllOrders (admin-callable), getMyOrders (customer-callable, returns only the caller's orders).",
-      "reqIds": [
-        "REQ-4"
-      ],
       "status": "pending"
     }
   ],
   "gameProjectType": "none",
-  "projectName": "Cattle & Customer Management System",
+  "projectName": "AO Farms Portal",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

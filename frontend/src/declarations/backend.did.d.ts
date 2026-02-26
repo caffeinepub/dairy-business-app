@@ -43,7 +43,8 @@ export interface CustomerAccount {
 export type HealthStatus = { 'Healthy' : null } |
   { 'Sick' : null } |
   { 'Recovered' : null };
-export type LoginError = { 'AccountNotFound' : null } |
+export type LoginError = { 'AccessDenied' : null } |
+  { 'AccountNotFound' : null } |
   { 'InvalidCredentials' : null } |
   { 'AccountInactive' : null };
 export type LoginResult = { 'ok' : string } |
@@ -67,6 +68,7 @@ export interface _SERVICE {
     [string, string, string, string, string, boolean],
     bigint
   >,
+  'adminLogin' : ActorMethod<[], LoginResult>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'customerLogin' : ActorMethod<[string, string], LoginResult>,
   'deleteCattle' : ActorMethod<[bigint], undefined>,

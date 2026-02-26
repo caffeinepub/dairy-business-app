@@ -1,129 +1,105 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Cattle & Customer Management System — Frontend Rebuild with Admin and Customer Portals",
+  "title": "Split login page into separate Admin and Customer entry points",
   "requirements": [
     {
-      "id": "REQ-5",
-      "summary": "Build Admin Panel frontend with protected login, Cattle Management table with CRUD operations, Customer Management table with active/inactive toggle, and Orders & Deliveries table with status updates",
+      "id": "REQ-1",
+      "summary": "Create a login selection landing page with clearly labeled Admin and Customer entry points",
       "acceptanceCriteria": [
-        "Admin login screen is shown to unauthenticated users navigating to /admin",
-        "Correct admin credentials grant access to the admin panel",
-        "Cattle table displays all fields and supports add/edit/delete via dialogs",
-        "Customer table supports add/edit/delete and active/inactive toggle",
-        "Orders table displays all orders and allows status updates",
-        "Admin is redirected to login on logout or session expiry"
+        "A login selection page is shown as the default landing route",
+        "Two distinct buttons or sections are visible: one for Admin and one for Customer",
+        "Clicking 'Admin Login' navigates to the admin authentication flow",
+        "Clicking 'Customer Login' navigates to the customer portal login form"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/AdminPanel.tsx",
+          "path": "frontend/src/pages/LoginSelection.tsx",
           "operation": "create",
-          "description": "Create the main admin panel page component that uses the authorization component to enforce admin-only access. Use Internet Identity login as the authentication mechanism (admins are principals with the admin role assigned via the authorization component). After successful authentication and role verification, render a tabbed interface with three sections: Cattle Management, Customer Management, and Orders & Deliveries. Use shadcn/ui Tabs component for navigation between sections. Show a login prompt with Internet Identity integration for unauthenticated users. Verify the authorization component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/AdminCattleManagement.tsx",
-          "operation": "create",
-          "description": "Create a cattle management section component for the admin panel that calls getAllCattle() from the backend interface and displays a data table with columns: tagNumber, breed, dateOfPurchase (formatted timestamp), milkingCapacity (litres/day), purchasePrice, availability (Available/Sold/Reserved badge), healthStatus (Healthy/Sick/Recovered badge), and action buttons. Include 'Add Cattle' button that opens a dialog with a form for all seven cattle fields. Each row has Edit and Delete action buttons that call updateCattle() and deleteCattle() backend methods respectively. Use shadcn/ui Table, Dialog, Button, Badge, and Form components. Show loading and error states. Use TanStack Query hooks for data fetching and mutations."
-        },
-        {
-          "path": "frontend/src/components/AdminCustomerManagement.tsx",
-          "operation": "create",
-          "description": "Create a customer management section component that calls getAllCustomers() from the backend interface and displays a table with columns: name, phone, address, isActive (toggle switch), and action buttons. Include 'Add Customer' button opening a dialog with fields for name, phone, address, username, password (with hash on submit), and isActive checkbox. Each row has Edit and Delete buttons calling updateCustomer() and deleteCustomer(). The isActive toggle calls setCustomerActive(customerId, newStatus). Use shadcn/ui Table, Dialog, Switch, Button, and Form components. Hash passwords client-side before sending to backend. Show appropriate loading and error states."
-        },
-        {
-          "path": "frontend/src/components/AdminOrdersDeliveries.tsx",
-          "operation": "create",
-          "description": "Create orders and deliveries section component that calls getAllOrders() from the backend interface and displays a table with columns: orderId, customer name (resolve from customerId by cross-referencing getAllCustomers()), cattleTagNumber, orderDate (formatted timestamp), status (Pending/Confirmed/OutForDelivery/Delivered/Cancelled badge), and deliveryNotes. Include an 'Update Status' button per row that opens a dialog allowing status change via dropdown and optional deliveryNotes update, calling updateOrderStatus(orderId, newStatus, notes). Use shadcn/ui Table, Dialog, Select, Textarea, Badge, and Button components. Show loading and error states."
-        },
-        {
-          "path": "frontend/src/hooks/useAdminQueries.ts",
-          "operation": "create",
-          "description": "Create TanStack Query hooks for admin operations: useGetAllCattle (calls actor.getAllCattle), useAddCattle (mutation calling actor.addCattle), useUpdateCattle (mutation calling actor.updateCattle), useDeleteCattle (mutation calling actor.deleteCattle), useGetAllCustomers (calls actor.getAllCustomers), useAddCustomer (mutation calling actor.addCustomer with client-side password hashing), useUpdateCustomer (mutation calling actor.updateCustomer), useDeleteCustomer (mutation calling actor.deleteCustomer), useSetCustomerActive (mutation calling actor.setCustomerActive), useGetAllOrders (calls actor.getAllOrders), useUpdateOrderStatus (mutation calling actor.updateOrderStatus). Include proper query invalidation on mutations and toast notifications on success/error."
+          "description": "Create a landing page component that displays two prominent navigation options: 'Admin Login' and 'Customer Login'. Each option should be a card or button that clearly indicates its purpose. Use the authorization component to support role-based navigation. Style consistently with the existing AO Farms theme using Tailwind classes and OKLCH color tokens. Include the AO Farms logo from frontend/public/assets/generated/ao-farms-logo.dim_400x400.png at the top of the page."
         },
         {
           "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Add a new route for /admin that renders the AdminPanel page component. Ensure the route is registered in the TanStack Router configuration alongside existing routes. Do not remove or modify existing routes (dashboard, cattle, milk, inventory, customers, deliveries, reports, /portal)."
-        },
-        {
-          "path": "frontend/src/components/Layout.tsx",
-          "operation": "modify",
-          "description": "Add a navigation link to 'Admin Panel' (/admin) in both desktop and mobile navigation menus. Position it logically within the existing navigation structure. Do not remove existing links."
+          "description": "Add a new route for the LoginSelection page at the root path '/'. Update the existing routing configuration to include this new landing page as the default entry point. Ensure the route is publicly accessible without authentication."
         }
       ]
     },
     {
-      "id": "REQ-6",
-      "summary": "Build Customer Portal frontend at /portal with username/password login, Place Order tab for selecting available cattle and submitting orders, and My Deliveries tab listing customer's own orders with status badges",
+      "id": "REQ-2",
+      "summary": "Restore working admin login flow using Internet Identity with backend admin verification and dashboard redirect",
       "acceptanceCriteria": [
-        "Customer login form is shown at /portal for unauthenticated users",
-        "Active, admin-created customers can log in with correct credentials",
-        "Inactive customers see an 'Access denied / account inactive' message after login attempt",
-        "Place Order tab shows available cattle and submits an order",
-        "My Deliveries tab shows only the logged-in customer's orders with current statuses",
-        "Customers cannot access cattle inventory details beyond tag number and breed for ordering"
+        "Admin Login page shows an Internet Identity login button",
+        "After authentication, the backend isAdmin check is called",
+        "Successful admin authentication redirects to the admin dashboard",
+        "Non-admin principals see a clear 'Access denied' or 'Not authorized' message",
+        "Admin session persists across page refreshes"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/CustomerPortal.tsx",
-          "operation": "modify",
-          "description": "Replace the existing Internet Identity authentication flow with a custom username/password login form. When unauthenticated, display a login form with username and password fields that calls customerLogin(username, password) from the backend interface. On successful login (receiving a session token), store the token and customerId in React state or context. Handle LoginError variants explicitly: show 'Account not found' for AccountNotFound, 'Invalid credentials' for InvalidCredentials, and 'Access denied - your account is inactive' for AccountInactive. After successful login, render the existing tabbed interface (product catalog renamed to 'Place Order', delivery history renamed to 'My Deliveries'). Remove Internet Identity provider dependency from this page. Keep the ProfileSetupModal removed or hidden as it's not needed for username/password customers."
-        },
-        {
-          "path": "frontend/src/components/CustomerPlaceOrder.tsx",
+          "path": "frontend/src/pages/AdminLogin.tsx",
           "operation": "create",
-          "description": "Create a Place Order tab component that fetches available cattle via getAllCattle() and filters for availability === 'Available'. Display cattle in a card grid or selectable list showing only tagNumber and breed (no other inventory details). Provide a form with a cattle selection dropdown, delivery notes textarea, and a 'Place Order' button. On submit, call placeOrder(customerId, selectedCattleTagNumber, deliveryNotes) where customerId comes from the logged-in session state. Show success toast on order placement and refresh the My Deliveries tab data. Use shadcn/ui Card, Select, Textarea, and Button components."
+          "description": "Create a dedicated admin login page that uses Internet Identity authentication via the useInternetIdentity hook. After successful II authentication, call the backend isCallerAdmin method to verify admin role. On success, redirect to '/admin' (the admin panel). If the principal is not an admin, display a clear error message like 'Access denied: Admin privileges required' and provide a logout button. Use the authorization component to handle authentication state. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/components/CustomerMyDeliveries.tsx",
-          "operation": "create",
-          "description": "Create a My Deliveries tab component that calls getMyOrders() from the backend interface (returns only the logged-in customer's orders). Display orders in a table or list with columns: orderId, cattleTagNumber, orderDate (formatted), status (badge with color coding: Pending=yellow, Confirmed=blue, OutForDelivery=purple, Delivered=green, Cancelled=red), and deliveryNotes. Use shadcn/ui Table and Badge components. Show loading and empty states appropriately."
-        },
-        {
-          "path": "frontend/src/hooks/useCustomerQueries.ts",
-          "operation": "create",
-          "description": "Create TanStack Query hooks for customer operations: useCustomerLogin (mutation calling actor.customerLogin, returning token and handling LoginError variants), useGetAvailableCattle (query calling actor.getAllCattle and filtering for Available status), usePlaceOrder (mutation calling actor.placeOrder with customerId, cattleTagNumber, deliveryNotes), useGetMyOrders (query calling actor.getMyOrders). Include proper error handling and toast notifications."
-        },
-        {
-          "path": "frontend/src/context/CustomerAuthContext.tsx",
-          "operation": "create",
-          "description": "Create a React context and provider to manage customer authentication state (isAuthenticated, customerId, sessionToken, username). Provide login and logout functions that wrap the useCustomerLogin mutation and manage session state. Store session data in memory (React state) and optionally sessionStorage for persistence across page reloads. Provide a useCustomerAuth hook for consuming components."
-        },
-        {
-          "path": "frontend/src/main.tsx",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Wrap the App component with the new CustomerAuthProvider to make customer authentication state available throughout the customer portal pages. Place it inside the existing QueryClientProvider and InternetIdentityProvider wrappers."
-        }
-      ]
-    },
-    {
-      "id": "REQ-7",
-      "summary": "Apply a consistent green-and-white visual theme with earthy accents across Admin Panel and Customer Portal, ensuring the admin panel feels authoritative and data-dense while the customer portal feels friendly and simple",
-      "acceptanceCriteria": [
-        "Color palette is applied consistently across all pages",
-        "Admin panel and customer portal share a coherent but role-appropriate visual style",
-        "All tables, forms, and dialogs use the defined theme"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/index.css",
-          "operation": "modify",
-          "description": "Update the existing CSS custom properties to define a green-and-white color palette with earthy accent tones. Replace or extend the current oklch-based color system to include primary green shades (e.g., --primary: 142 70% 45% for a professional green), white backgrounds, and earthy accents (browns, tans for secondary elements). Ensure both light and dark mode tokens are updated. Keep the existing Tailwind directives and font imports intact. The updated palette should support authoritative data-dense admin interfaces and friendly simple customer interfaces."
-        },
-        {
-          "path": "frontend/tailwind.config.js",
-          "operation": "modify",
-          "description": "Extend the Tailwind theme configuration to reference the updated CSS custom properties from index.css for the green-and-white palette. Add or update color aliases (e.g., 'admin-primary', 'customer-primary', 'earthy-accent') that map to the new green and earthy tones. Ensure existing chart, farm, and sidebar color palettes are preserved or adapted to the new theme. Do not remove existing plugins or font configurations."
+          "description": "Add a route for the AdminLogin page at '/admin-login'. Wire this route into the router configuration so it can be accessed from the LoginSelection page."
         },
         {
           "path": "frontend/src/pages/AdminPanel.tsx",
           "operation": "modify",
-          "description": "Apply admin-specific styling using the defined green-and-white theme. Use darker, more authoritative shades for headers and navigation. Apply card-based layouts with generous padding and clear section dividers to convey a data-dense, professional feel. Use shadcn/ui components styled with the updated Tailwind classes referencing the new color palette."
+          "description": "Update the AdminPanel component to redirect unauthenticated users to '/admin-login' instead of handling login inline. Remove any embedded login UI and rely on the dedicated AdminLogin page. Ensure the component still verifies admin status via isCallerAdmin and shows appropriate loading states."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Create dedicated Customer Login page with username/password authentication and customer portal redirect",
+      "acceptanceCriteria": [
+        "Customer Login page displays username and password input fields",
+        "Submitting valid credentials authenticates the customer via the backend loginCustomer call",
+        "Successful login stores the customer session (via CustomerAuthContext) and redirects to the customer portal",
+        "Invalid credentials display a user-friendly error message",
+        "Customer session persists in sessionStorage across page refreshes"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/CustomerLogin.tsx",
+          "operation": "create",
+          "description": "Create a dedicated customer login page with username and password input fields. Use the useCustomerLogin mutation hook from frontend/src/hooks/useCustomerQueries.ts to authenticate via the backend customerLogin method. On successful authentication, call the CustomerAuthContext login function to store the session in sessionStorage, then redirect to '/portal'. Display user-friendly error messages for invalid credentials, account not found, or inactive accounts. Use shadcn/ui form components (Input, Button, Label) and maintain consistency with the AO Farms theme."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Add a route for the CustomerLogin page at '/customer-login'. Wire this route into the router configuration so it can be accessed from the LoginSelection page."
         },
         {
           "path": "frontend/src/pages/CustomerPortal.tsx",
           "operation": "modify",
-          "description": "Apply customer-specific styling using softer, friendlier tones from the green-and-white palette. Use lighter green accents and larger, more approachable typography. Simplify the layout with clear calls-to-action and ample whitespace to create a welcoming, easy-to-navigate experience. Use shadcn/ui components styled with the updated Tailwind classes."
+          "description": "Update the CustomerPortal component to redirect unauthenticated customers to '/customer-login' instead of showing an inline login form. Remove the embedded login UI and rely on the dedicated CustomerLogin page. Ensure authenticated customers can still access their orders and place new orders using the existing CustomerAuthContext."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Update app routing to use login selection as root and protect admin and customer portal routes",
+      "acceptanceCriteria": [
+        "Navigating to '/' shows the login selection page",
+        "Navigating directly to an admin route without authentication redirects to admin login",
+        "Navigating directly to the customer portal without a customer session redirects to customer login",
+        "Both portals are fully inaccessible without proper authentication"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Update the root route '/' to render the LoginSelection component. Add route guards or wrapper components for '/admin' and child admin routes that check authentication and admin status, redirecting to '/admin-login' if unauthorized. Add route guards for '/portal' that check customer authentication via CustomerAuthContext, redirecting to '/customer-login' if not authenticated. Ensure all protected routes properly enforce authentication before rendering content."
+        },
+        {
+          "path": "frontend/src/components/Layout.tsx",
+          "operation": "modify",
+          "description": "Update the Layout component navigation to conditionally show admin and customer portal links based on authentication state. For unauthenticated users, show a link to the login selection page. Ensure the navigation reflects the new routing structure with separate admin and customer entry points."
         }
       ]
     }

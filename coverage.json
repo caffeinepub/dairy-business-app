@@ -1,108 +1,75 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-26T04:43:24.878Z",
+  "generatedAt": "2026-02-26T05:01:51.953Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 7,
-    "implemented": 3,
+    "total": 4,
+    "implemented": 4,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Implement a backend data model and CRUD operations for Cattle records with the following fields: tagNumber (Text), breed (Text), dateOfPurchase (Int/timestamp), milkingCapacity (Float, litres/day), purchasePrice (Float), availability (variant: Available | Sold | Reserved), healthStatus (variant: Healthy | Sick | Recovered). Expose addCattle, updateCattle, deleteCattle, and getAllCattle functions. Only the admin principal can call mutating functions.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Create a dedicated landing/login selection page that presents two clearly labeled entry points: 'Admin Login' and 'Customer Login', allowing users to choose their portal before proceeding.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/LoginSelection.tsx",
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/LoginSelection.tsx",
+          "frontend/src/App.tsx"
+        ]
       },
       {
         "id": "REQ-2",
-        "summary": "Implement a backend data model and CRUD operations for Customer accounts with fields: name (Text), phone (Text), address (Text), username (Text, unique login credential), passwordHash (Text), isActive (Bool). Expose addCustomer, updateCustomer, deleteCustomer, setCustomerActive, and getAllCustomers functions. Only the admin principal can call these functions.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Restore the working admin login flow from Version 28: the Admin login page must use Internet Identity authentication, verify admin role via the backend actor, and redirect to the admin dashboard on success. Display a clear error if the authenticated principal is not an admin.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/AdminLogin.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/pages/AdminPanel.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/AdminLogin.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/pages/AdminPanel.tsx"
+        ]
       },
       {
         "id": "REQ-3",
-        "summary": "Implement customer authentication backend logic: a customerLogin(username, password) function that checks credentials against stored customer accounts, returns a session token or error if the account does not exist or isActive is false. Inactive and non-existent customers must be explicitly rejected with a clear error variant.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Create a dedicated Customer Login page where customers authenticate using their username and password credentials managed in the backend CustomerAccount store. On success, store the customer session and redirect to the Customer Portal.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/CustomerLogin.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/pages/CustomerPortal.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/CustomerLogin.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/pages/CustomerPortal.tsx"
+        ]
       },
       {
         "id": "REQ-4",
-        "summary": "Implement backend Order management: Order record with fields orderId (Nat), customerId (Nat), cattleTagNumber (Text), orderDate (Int), status (variant: Pending | Confirmed | OutForDelivery | Delivered | Cancelled), deliveryNotes (Text). Expose placeOrder (customer-callable, only for own orders), updateOrderStatus (admin-callable), getAllOrders (admin-callable), getMyOrders (customer-callable, returns only the caller's orders).",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
-      },
-      {
-        "id": "REQ-5",
-        "summary": "Build the Admin Panel frontend with a protected login screen (username/password). After login, provide navigation to three sections: (1) Cattle Management — table listing all cattle with tag number, breed, date of purchase, milking capacity, purchase price, availability, health status, and action buttons for add/edit/delete; (2) Customer Management — table listing all customers with name, phone, address, active/inactive status toggle, and add/edit/delete actions; (3) Orders & Deliveries — table of all orders with customer name, cattle tag, order date, status, and ability to update delivery status.",
+        "summary": "Update the app routing so that the root path ('/') renders the new login selection page. Protect the admin panel routes to redirect unauthenticated or non-admin users back to the admin login page. Protect the customer portal route to redirect unauthenticated customers back to the customer login page.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/AdminPanel.tsx",
-          "frontend/src/components/AdminCattleManagement.tsx",
-          "frontend/src/components/AdminCustomerManagement.tsx",
-          "frontend/src/components/AdminOrdersDeliveries.tsx",
-          "frontend/src/hooks/useAdminQueries.ts",
           "frontend/src/App.tsx",
           "frontend/src/components/Layout.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/AdminPanel.tsx",
-          "frontend/src/components/AdminCattleManagement.tsx",
-          "frontend/src/components/AdminCustomerManagement.tsx",
-          "frontend/src/components/AdminOrdersDeliveries.tsx",
-          "frontend/src/hooks/useAdminQueries.ts",
           "frontend/src/App.tsx",
           "frontend/src/components/Layout.tsx"
-        ]
-      },
-      {
-        "id": "REQ-6",
-        "summary": "Build the Customer Portal frontend at /portal with a username/password login form. After successful login, show two tabs: (1) Place Order — allows the customer to submit a new order by selecting available cattle (shown by tag number and breed) and entering delivery notes; (2) My Deliveries — lists the customer's own orders with status badges (Pending, Confirmed, Out for Delivery, Delivered, Cancelled) and delivery notes. Block access entirely for inactive or non-existent customer accounts and show a clear 'Access denied' message.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/CustomerPortal.tsx",
-          "frontend/src/components/CustomerPlaceOrder.tsx",
-          "frontend/src/components/CustomerMyDeliveries.tsx",
-          "frontend/src/hooks/useCustomerQueries.ts",
-          "frontend/src/context/CustomerAuthContext.tsx",
-          "frontend/src/main.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/CustomerPortal.tsx",
-          "frontend/src/components/CustomerPlaceOrder.tsx",
-          "frontend/src/components/CustomerMyDeliveries.tsx",
-          "frontend/src/hooks/useCustomerQueries.ts",
-          "frontend/src/context/CustomerAuthContext.tsx"
-        ]
-      },
-      {
-        "id": "REQ-7",
-        "summary": "Apply a consistent visual theme across both the Admin Panel and Customer Portal: use a clean, professional green-and-white color palette with earthy accent tones, clear typography, and card-based layouts. Admin panel should feel authoritative and data-dense; customer portal should feel friendly and simple.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/index.css",
-          "frontend/tailwind.config.js",
-          "frontend/src/pages/AdminPanel.tsx",
-          "frontend/src/pages/CustomerPortal.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/index.css",
-          "frontend/tailwind.config.js",
-          "frontend/src/pages/AdminPanel.tsx",
-          "frontend/src/pages/CustomerPortal.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
     "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
@@ -110,44 +77,14 @@
     "frontend/src/App.tsx",
     "frontend/src/backend.d.ts",
     "frontend/src/backend.ts",
-    "frontend/src/components/AdminCattleManagement.tsx",
-    "frontend/src/components/AdminCustomerManagement.tsx",
-    "frontend/src/components/AdminOrdersDeliveries.tsx",
-    "frontend/src/components/CattleForm.tsx",
-    "frontend/src/components/CattleHealthChart.tsx",
-    "frontend/src/components/CustomerDeliveryList.tsx",
-    "frontend/src/components/CustomerFeedbackDialog.tsx",
-    "frontend/src/components/CustomerForm.tsx",
-    "frontend/src/components/CustomerMyDeliveries.tsx",
-    "frontend/src/components/CustomerPlaceOrder.tsx",
-    "frontend/src/components/DeliveryQuantityChart.tsx",
-    "frontend/src/components/FlaggedFeedbackSection.tsx",
-    "frontend/src/components/InventoryForm.tsx",
     "frontend/src/components/Layout.tsx",
-    "frontend/src/components/MilkProductionChart.tsx",
-    "frontend/src/components/MilkProductionTrendChart.tsx",
-    "frontend/src/components/ProfileSetupModal.tsx",
-    "frontend/src/components/ResolveFeedbackDialog.tsx",
-    "frontend/src/components/WhatsAppMessageModal.tsx",
-    "frontend/src/context/CustomerAuthContext.tsx",
     "frontend/src/declarations/backend.did.d.ts",
     "frontend/src/declarations/backend.did.js",
-    "frontend/src/hooks/useAdminQueries.ts",
-    "frontend/src/hooks/useCustomerQueries.ts",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/index.css",
-    "frontend/src/lib/localTypes.ts",
+    "frontend/src/pages/AdminLogin.tsx",
     "frontend/src/pages/AdminPanel.tsx",
-    "frontend/src/pages/CattleManagement.tsx",
-    "frontend/src/pages/CustomerManagement.tsx",
+    "frontend/src/pages/CustomerLogin.tsx",
     "frontend/src/pages/CustomerPortal.tsx",
-    "frontend/src/pages/Dashboard.tsx",
-    "frontend/src/pages/DeliveryReports.tsx",
-    "frontend/src/pages/InventoryManagement.tsx",
-    "frontend/src/pages/MilkProduction.tsx",
-    "frontend/src/pages/MonthlyReports.tsx",
-    "frontend/src/utils/csvExport.ts",
-    "frontend/tailwind.config.js",
+    "frontend/src/pages/LoginSelection.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

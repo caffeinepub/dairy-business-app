@@ -3,7 +3,7 @@ import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { Menu, X, LayoutDashboard, Beef, Droplets, Package, Users, Truck, BarChart3, ExternalLink, ShieldCheck } from 'lucide-react';
 
 const navLinks = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/cattle', label: 'Cattle', icon: Beef },
   { to: '/milk', label: 'Milk Production', icon: Droplets },
   { to: '/inventory', label: 'Inventory', icon: Package },
@@ -18,7 +18,7 @@ export default function Layout() {
   const currentPath = routerState.location.pathname;
 
   const isActive = (to: string) => {
-    if (to === '/') return currentPath === '/';
+    if (to === '/dashboard') return currentPath === '/dashboard';
     return currentPath.startsWith(to);
   };
 
@@ -29,7 +29,7 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3 shrink-0">
+            <Link to="/dashboard" className="flex items-center gap-3 shrink-0">
               <img
                 src="/assets/generated/ao-farms-logo.dim_320x160.png"
                 alt="AO Farms"

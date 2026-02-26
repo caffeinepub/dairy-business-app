@@ -18,17 +18,18 @@ export const HealthStatus = IDL.Variant({
   'Sick' : IDL.Null,
   'Recovered' : IDL.Null,
 });
-export const UserRole = IDL.Variant({
-  'admin' : IDL.Null,
-  'user' : IDL.Null,
-  'guest' : IDL.Null,
-});
 export const LoginError = IDL.Variant({
+  'AccessDenied' : IDL.Null,
   'AccountNotFound' : IDL.Null,
   'InvalidCredentials' : IDL.Null,
   'AccountInactive' : IDL.Null,
 });
 export const LoginResult = IDL.Variant({ 'ok' : IDL.Text, 'err' : LoginError });
+export const UserRole = IDL.Variant({
+  'admin' : IDL.Null,
+  'user' : IDL.Null,
+  'guest' : IDL.Null,
+});
 export const Cattle = IDL.Record({
   'id' : IDL.Nat,
   'purchasePrice' : IDL.Float64,
@@ -85,6 +86,7 @@ export const idlService = IDL.Service({
       [IDL.Nat],
       [],
     ),
+  'adminLogin' : IDL.Func([], [LoginResult], ['query']),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'customerLogin' : IDL.Func([IDL.Text, IDL.Text], [LoginResult], ['query']),
   'deleteCattle' : IDL.Func([IDL.Nat], [], []),
@@ -140,17 +142,18 @@ export const idlFactory = ({ IDL }) => {
     'Sick' : IDL.Null,
     'Recovered' : IDL.Null,
   });
-  const UserRole = IDL.Variant({
-    'admin' : IDL.Null,
-    'user' : IDL.Null,
-    'guest' : IDL.Null,
-  });
   const LoginError = IDL.Variant({
+    'AccessDenied' : IDL.Null,
     'AccountNotFound' : IDL.Null,
     'InvalidCredentials' : IDL.Null,
     'AccountInactive' : IDL.Null,
   });
   const LoginResult = IDL.Variant({ 'ok' : IDL.Text, 'err' : LoginError });
+  const UserRole = IDL.Variant({
+    'admin' : IDL.Null,
+    'user' : IDL.Null,
+    'guest' : IDL.Null,
+  });
   const Cattle = IDL.Record({
     'id' : IDL.Nat,
     'purchasePrice' : IDL.Float64,
@@ -207,6 +210,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Nat],
         [],
       ),
+    'adminLogin' : IDL.Func([], [LoginResult], ['query']),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'customerLogin' : IDL.Func([IDL.Text, IDL.Text], [LoginResult], ['query']),
     'deleteCattle' : IDL.Func([IDL.Nat], [], []),

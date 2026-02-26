@@ -2,15 +2,31 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-build-the-admin-panel-frontend-with-a-protected-login-screen-username-password-after-login-provide-navigation-to-three-sections-1-cattle-management-table-listing-all-cattle-with-tag-number-breed-date-of-purchase-milking-capacity-purchase-price-availability-health-status-and-action-buttons-for-add-edit-delete-2-customer-management-table-listing-all-customers-with-name-phone-address-active-inactive-status-toggle-and-add-edit-delete-actions-3-orders-deliveries-table-of-all-orders-with-customer-name-cattle-tag-order-date-status-and-ability-to-update-delivery-status",
-      "featureTitle": "Build the Admin Panel frontend with a protected login screen (username/password). After login, provide navigation to three sections: (1) Cattle Management — table listing all cattle with tag number, breed, date of purchase, milking capacity, purchase price, availability, health status, and action buttons for add/edit/delete; (2) Customer Management — table listing all customers with name, phone, address, active/inactive status toggle, and add/edit/delete actions; (3) Orders & Deliveries — table of all orders with customer name, cattle tag, order date, status, and ability to update delivery status.",
+      "featureId": "feature-create-a-dedicated-landing-login-selection-page-that-presents-two-clearly-labeled-entry-points-admin-login-and-customer-login-allowing-users-to-choose-their-portal-before-proceeding",
+      "featureTitle": "Create a dedicated landing/login selection page that presents two clearly labeled entry points: 'Admin Login' and 'Customer Login', allowing users to choose their portal before proceeding.",
       "files": [
         "frontend/src/App.tsx",
-        "frontend/src/components/AdminCattleManagement.tsx",
-        "frontend/src/components/AdminCustomerManagement.tsx",
-        "frontend/src/components/AdminOrdersDeliveries.tsx",
-        "frontend/src/components/Layout.tsx",
-        "frontend/src/hooks/useAdminQueries.ts",
+        "frontend/src/pages/LoginSelection.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-restore-the-working-admin-login-flow-from-version-28-the-admin-login-page-must-use-internet-identity-authentication-verify-admin-role-via-the-backend-actor-and-redirect-to-the-admin-dashboard-on-success-display-a-clear-error-if-the-authenticated-principal-is-not-an-admin",
+      "featureTitle": "Restore the working admin login flow from Version 28: the Admin login page must use Internet Identity authentication, verify admin role via the backend actor, and redirect to the admin dashboard on success. Display a clear error if the authenticated principal is not an admin.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/pages/AdminLogin.tsx",
         "frontend/src/pages/AdminPanel.tsx"
       ],
       "components": [
@@ -22,18 +38,16 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-5"
+        "REQ-2"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-build-the-customer-portal-frontend-at-portal-with-a-username-password-login-form-after-successful-login-show-two-tabs-1-place-order-allows-the-customer-to-submit-a-new-order-by-selecting-available-cattle-shown-by-tag-number-and-breed-and-entering-delivery-notes-2-my-deliveries-lists-the-customer-s-own-orders-with-status-badges-pending-confirmed-out-for-delivery-delivered-cancelled-and-delivery-notes-block-access-entirely-for-inactive-or-non-existent-customer-accounts-and-show-a-clear-access-denied-message",
-      "featureTitle": "Build the Customer Portal frontend at /portal with a username/password login form. After successful login, show two tabs: (1) Place Order — allows the customer to submit a new order by selecting available cattle (shown by tag number and breed) and entering delivery notes; (2) My Deliveries — lists the customer's own orders with status badges (Pending, Confirmed, Out for Delivery, Delivered, Cancelled) and delivery notes. Block access entirely for inactive or non-existent customer accounts and show a clear 'Access denied' message.",
+      "featureId": "feature-create-a-dedicated-customer-login-page-where-customers-authenticate-using-their-username-and-password-credentials-managed-in-the-backend-customeraccount-store-on-success-store-the-customer-session-and-redirect-to-the-customer-portal",
+      "featureTitle": "Create a dedicated Customer Login page where customers authenticate using their username and password credentials managed in the backend CustomerAccount store. On success, store the customer session and redirect to the Customer Portal.",
       "files": [
-        "frontend/src/components/CustomerMyDeliveries.tsx",
-        "frontend/src/components/CustomerPlaceOrder.tsx",
-        "frontend/src/context/CustomerAuthContext.tsx",
-        "frontend/src/hooks/useCustomerQueries.ts",
+        "frontend/src/App.tsx",
+        "frontend/src/pages/CustomerLogin.tsx",
         "frontend/src/pages/CustomerPortal.tsx"
       ],
       "components": [
@@ -45,18 +59,16 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-6"
+        "REQ-3"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-apply-a-consistent-visual-theme-across-both-the-admin-panel-and-customer-portal-use-a-clean-professional-green-and-white-color-palette-with-earthy-accent-tones-clear-typography-and-card-based-layouts-admin-panel-should-feel-authoritative-and-data-dense-customer-portal-should-feel-friendly-and-simple",
-      "featureTitle": "Apply a consistent visual theme across both the Admin Panel and Customer Portal: use a clean, professional green-and-white color palette with earthy accent tones, clear typography, and card-based layouts. Admin panel should feel authoritative and data-dense; customer portal should feel friendly and simple.",
+      "featureId": "feature-update-the-app-routing-so-that-the-root-path-renders-the-new-login-selection-page-protect-the-admin-panel-routes-to-redirect-unauthenticated-or-non-admin-users-back-to-the-admin-login-page-protect-the-customer-portal-route-to-redirect-unauthenticated-customers-back-to-the-customer-login-page",
+      "featureTitle": "Update the app routing so that the root path ('/') renders the new login selection page. Protect the admin panel routes to redirect unauthenticated or non-admin users back to the admin login page. Protect the customer portal route to redirect unauthenticated customers back to the customer login page.",
       "files": [
-        "frontend/src/index.css",
-        "frontend/src/pages/AdminPanel.tsx",
-        "frontend/src/pages/CustomerPortal.tsx",
-        "frontend/tailwind.config.js"
+        "frontend/src/App.tsx",
+        "frontend/src/components/Layout.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -67,7 +79,7 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-7"
+        "REQ-4"
       ],
       "confidence": "high"
     }
