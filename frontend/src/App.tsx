@@ -9,6 +9,7 @@ import InventoryManagement from './pages/InventoryManagement';
 import CustomerManagement from './pages/CustomerManagement';
 import DeliveryReports from './pages/DeliveryReports';
 import MonthlyReports from './pages/MonthlyReports';
+import CustomerPortal from './pages/CustomerPortal';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,6 +70,12 @@ const reportsRoute = createRoute({
   component: MonthlyReports,
 });
 
+const customerPortalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/portal',
+  component: CustomerPortal,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   cattleRoute,
@@ -77,6 +84,7 @@ const routeTree = rootRoute.addChildren([
   customersRoute,
   deliveriesRoute,
   reportsRoute,
+  customerPortalRoute,
 ]);
 
 const router = createRouter({ routeTree });

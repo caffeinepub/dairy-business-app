@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { BarChart3, Printer, Truck, Droplets, Download } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Download, BarChart3, Users, Truck, Droplets } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -17,8 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   useGetDeliveryRecordsByMonth,
   useGetMilkRecordsByMonth,
@@ -28,358 +27,382 @@ import {
 import { Variant_missed_delivered } from '../backend';
 import { downloadCustomerMonthlyCSV } from '../utils/csvExport';
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
 export default function MonthlyReports() {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
-  const { data: deliveries = [], isLoading: deliveriesLoading } = useGetDeliveryRecordsByMonth(
-    selectedMonth,
-    selectedYear,
-  );
-  const { data: milkRecords = [], isLoading: milkLoading } = useGetMilkRecordsByMonth(
-    selectedMonth,
-    selectedYear,
-  );
-  const { data: customers = [], isLoading: customersLoading } = useGetCustomers();
+  const { data: deliveries = [] } = useGetDeliveryRecordsByMonth(selectedMonth, selectedYear);
+  const { data: milkRecords = [] } = useGetMilkRecordsByMonth(selectedMonth, selectedYear);
+  const { data: customers = [] } = useGetCustomers();
 
-  const years = useMemo((): number[] => {
-    const y: number[] = [];
-    for (let i = now.getFullYear() - 2; i <= now.getFullYear() + 1; i++) y.push(i);
-    return y;
-  }, []);
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 
-  // Build a customer id → name map
-  const customerNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const c of customers) {
-      map.set(c.id.toString(), c.name);
+  // Group deliveries by customerPrincipal string
+  const customerDeliveryMap = useMemo(() => {
+    const map = new Map<string, typeof deliveries>();
+    for (const d of deliveries) {
+      const key = d.customerPrincipal?.toString() ?? 'unknown';
+      const existing = map.get(key) ?? [];
+      map.set(key, [...existing, d]);
     }
     return map;
-  }, [customers]);
-
-  // Delivery stats
-  const deliveredCount = deliveries.filter(
-    (d) => d.status === Variant_missed_delivered.delivered,
-  ).length;
-  const missedCount = deliveries.filter(
-    (d) => d.status === Variant_missed_delivered.missed,
-  ).length;
-  const totalLitersDelivered = deliveries
-    .filter((d) => d.status === Variant_missed_delivered.delivered)
-    .reduce((sum, d) => sum + d.quantityLiters, 0);
+  }, [deliveries]);
 
   // Per-customer breakdown
   const customerBreakdown = useMemo(() => {
-    const map = new Map<
-      string,
-      { customerId: string; name: string; delivered: number; missed: number; liters: number }
-    >();
-    for (const d of deliveries) {
-      const key = d.customerId.toString();
-      if (!map.has(key)) {
-        const resolvedName = customerNameMap.get(key) || `Customer #${key}`;
-        map.set(key, { customerId: key, name: resolvedName, delivered: 0, missed: 0, liters: 0 });
-      }
-      const entry = map.get(key)!;
-      if (d.status === Variant_missed_delivered.delivered) {
-        entry.delivered++;
-        entry.liters += d.quantityLiters;
-      } else {
-        entry.missed++;
-      }
-    }
-    return Array.from(map.values());
-  }, [deliveries, customerNameMap]);
+    return Array.from(customerDeliveryMap.entries()).map(([principalStr, recs]) => {
+      const delivered = recs.filter((r) => r.status === Variant_missed_delivered.delivered);
+      const missed = recs.filter((r) => r.status === Variant_missed_delivered.missed);
+      const totalQty = delivered.reduce((s, r) => s + r.quantityLiters, 0);
+      return {
+        principalStr,
+        total: recs.length,
+        delivered: delivered.length,
+        missed: missed.length,
+        totalQty,
+        records: recs,
+      };
+    });
+  }, [customerDeliveryMap]);
 
   // Delivery boy performance
-  const deliveryBoyStats = useMemo(() => {
-    const map = new Map<string, { delivered: number; missed: number }>();
+  const deliveryBoyMap = useMemo(() => {
+    const map = new Map<string, { delivered: number; missed: number; totalQty: number }>();
     for (const d of deliveries) {
-      if (!map.has(d.deliveryBoyName)) {
-        map.set(d.deliveryBoyName, { delivered: 0, missed: 0 });
-      }
-      const entry = map.get(d.deliveryBoyName)!;
+      const name = d.deliveryBoyName || 'Unknown';
+      const existing = map.get(name) ?? { delivered: 0, missed: 0, totalQty: 0 };
       if (d.status === Variant_missed_delivered.delivered) {
-        entry.delivered++;
+        map.set(name, {
+          ...existing,
+          delivered: existing.delivered + 1,
+          totalQty: existing.totalQty + d.quantityLiters,
+        });
       } else {
-        entry.missed++;
+        map.set(name, { ...existing, missed: existing.missed + 1 });
       }
     }
-    return Array.from(map.entries()).map(([name, stats]) => ({
-      name,
-      ...stats,
-      successRate:
-        stats.delivered + stats.missed > 0
-          ? Math.round((stats.delivered / (stats.delivered + stats.missed)) * 100)
-          : 0,
-    }));
+    return map;
   }, [deliveries]);
 
-  // Milk stats
-  const totalMilkLiters = milkRecords.reduce((sum, r) => sum + r.quantityLiters, 0);
-  const avgDailyMilk = milkRecords.length > 0 ? totalMilkLiters / milkRecords.length : 0;
+  // Summary stats
+  const totalDelivered = deliveries.filter(
+    (d) => d.status === Variant_missed_delivered.delivered,
+  ).length;
+  const totalMissed = deliveries.filter(
+    (d) => d.status === Variant_missed_delivered.missed,
+  ).length;
+  const totalQty = deliveries
+    .filter((d) => d.status === Variant_missed_delivered.delivered)
+    .reduce((s, d) => s + d.quantityLiters, 0);
+  const totalMilkProduced = milkRecords.reduce((s, r) => s + r.quantityLiters, 0);
 
-  const isLoading = deliveriesLoading || milkLoading || customersLoading;
-
-  const handleDownloadCustomer = (customerId: string, customerName: string) => {
-    const customerDeliveries = deliveries.filter(
-      (d) => d.customerId.toString() === customerId,
-    );
-    downloadCustomerMonthlyCSV(customerName, selectedMonth, selectedYear, customerDeliveries);
+  const handleDownloadCustomerCSV = (principalStr: string) => {
+    const recs = customerDeliveryMap.get(principalStr) ?? [];
+    // Use principal string as customer name since we don't have a direct mapping
+    const displayName = principalStr === 'unknown' ? 'Unknown' : principalStr.slice(0, 12) + '…';
+    downloadCustomerMonthlyCSV(recs, displayName, selectedMonth, selectedYear);
   };
 
   return (
-    <TooltipProvider>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground font-display">Monthly Reports</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {MONTHS[selectedMonth - 1]} {selectedYear} summary
-            </p>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <Select
-              value={selectedMonth.toString()}
-              onValueChange={(v) => setSelectedMonth(parseInt(v))}
-            >
-              <SelectTrigger className="w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MONTHS.map((m, i) => (
-                  <SelectItem key={m} value={(i + 1).toString()}>
-                    {m}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={selectedYear.toString()}
-              onValueChange={(v) => setSelectedYear(parseInt(v))}
-            >
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map((y: number) => (
-                  <SelectItem key={y} value={y.toString()}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" onClick={() => window.print()} className="gap-2 print:hidden">
-              <Printer className="w-4 h-4" />
-              Print Report
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold font-display text-foreground">Monthly Reports</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Comprehensive monthly delivery and production summary
+          </p>
         </div>
-
-        {isLoading ? (
-          <div className="text-center py-16 text-muted-foreground">Loading report data…</div>
-        ) : (
-          <>
-            {/* Delivery Summary */}
-            <section>
-              <h2 className="text-lg font-semibold text-foreground font-display mb-3 flex items-center gap-2">
-                <Truck className="w-5 h-5 text-primary" />
-                Delivery Summary
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                  { label: 'Total Deliveries', value: deliveries.length },
-                  { label: 'Delivered', value: deliveredCount },
-                  { label: 'Missed', value: missedCount },
-                  { label: 'Liters Delivered', value: `${totalLitersDelivered.toFixed(1)}L` },
-                ].map(({ label, value }) => (
-                  <Card key={label}>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-bold text-foreground">{value}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{label}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </section>
-
-            {/* Per-Customer Breakdown */}
-            {customerBreakdown.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center justify-between">
-                    <span>Customer Breakdown</span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      Click <Download className="w-3 h-3 inline mx-0.5" /> to download individual report
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Delivered</TableHead>
-                          <TableHead>Missed</TableHead>
-                          <TableHead>Total Liters</TableHead>
-                          <TableHead className="text-right print:hidden">Download</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {customerBreakdown.map((row) => (
-                          <TableRow key={row.customerId}>
-                            <TableCell className="font-medium">{row.name}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {row.delivered}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {row.missed > 0 ? (
-                                <Badge variant="destructive">{row.missed}</Badge>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">0</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="font-medium">{row.liters.toFixed(1)}L</TableCell>
-                            <TableCell className="text-right print:hidden">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                                    onClick={() =>
-                                      handleDownloadCustomer(row.customerId, row.name)
-                                    }
-                                  >
-                                    <Download className="w-4 h-4" />
-                                    <span className="sr-only">Download {row.name} report</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Download {row.name}'s report as CSV
-                                </TooltipContent>
-                              </Tooltip>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Delivery Boy Performance */}
-            {deliveryBoyStats.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Delivery Boy Performance</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Delivered</TableHead>
-                          <TableHead>Missed</TableHead>
-                          <TableHead>Success Rate</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {deliveryBoyStats.map((row) => (
-                          <TableRow key={row.name}>
-                            <TableCell className="font-medium">{row.name}</TableCell>
-                            <TableCell>{row.delivered}</TableCell>
-                            <TableCell>{row.missed}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={row.successRate >= 80 ? 'default' : 'destructive'}
-                              >
-                                {row.successRate}%
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Milk Production Summary */}
-            <section>
-              <h2 className="text-lg font-semibold text-foreground font-display mb-3 flex items-center gap-2">
-                <Droplets className="w-5 h-5 text-primary" />
-                Milk Production
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
-                {[
-                  { label: 'Total Records', value: milkRecords.length },
-                  { label: 'Total Liters', value: `${totalMilkLiters.toFixed(1)}L` },
-                  { label: 'Avg per Record', value: `${avgDailyMilk.toFixed(1)}L` },
-                ].map(({ label, value }) => (
-                  <Card key={label}>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-bold text-foreground">{value}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{label}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {milkRecords.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Milk Records</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Quantity (L)</TableHead>
-                            <TableHead>Notes</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {milkRecords.map((r) => (
-                            <TableRow key={r.id.toString()}>
-                              <TableCell className="text-sm">
-                                {nanosecondsToDate(r.date).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                {r.quantityLiters.toFixed(1)}
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {r.notes || '—'}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </section>
-          </>
-        )}
       </div>
-    </TooltipProvider>
+
+      {/* Month/Year Selector */}
+      <div className="flex gap-3 flex-wrap">
+        <Select
+          value={selectedMonth.toString()}
+          onValueChange={(v) => setSelectedMonth(parseInt(v))}
+        >
+          <SelectTrigger className="w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((m, i) => (
+              <SelectItem key={i + 1} value={(i + 1).toString()}>
+                {m}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={selectedYear.toString()}
+          onValueChange={(v) => setSelectedYear(parseInt(v))}
+        >
+          <SelectTrigger className="w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((y) => (
+              <SelectItem key={y} value={y.toString()}>
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Truck className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Deliveries</p>
+                <p className="text-xl font-bold">{deliveries.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-farm-green/10">
+                <BarChart3 className="w-5 h-5 text-farm-green" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Delivered</p>
+                <p className="text-xl font-bold text-farm-green">{totalDelivered}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-destructive/10">
+                <Users className="w-5 h-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Missed</p>
+                <p className="text-xl font-bold text-destructive">{totalMissed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-farm-sky/10">
+                <Droplets className="w-5 h-5 text-farm-sky" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Milk Produced</p>
+                <p className="text-xl font-bold">{totalMilkProduced.toFixed(1)}L</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Per-Customer Breakdown */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" />
+            Per-Customer Delivery Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {customerBreakdown.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No delivery data for this period.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Delivered</TableHead>
+                    <TableHead>Missed</TableHead>
+                    <TableHead>Quantity (L)</TableHead>
+                    <TableHead className="text-right">Export</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customerBreakdown.map(({ principalStr, total, delivered, missed, totalQty }) => (
+                    <TableRow key={principalStr}>
+                      <TableCell className="font-medium text-sm font-mono">
+                        {principalStr === 'unknown'
+                          ? 'Unknown'
+                          : principalStr.slice(0, 16) + '…'}
+                      </TableCell>
+                      <TableCell className="text-sm">{total}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-farm-green/20 text-farm-green border-farm-green/30 text-xs">
+                          {delivered}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {missed > 0 ? (
+                          <Badge variant="destructive" className="text-xs">
+                            {missed}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">0</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">{totalQty.toFixed(1)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => handleDownloadCustomerCSV(principalStr)}
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          CSV
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delivery Boy Performance */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Truck className="w-4 h-4 text-primary" />
+            Delivery Person Performance
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {deliveryBoyMap.size === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No delivery data for this period.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Delivered</TableHead>
+                    <TableHead>Missed</TableHead>
+                    <TableHead>Total Qty (L)</TableHead>
+                    <TableHead>Success Rate</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from(deliveryBoyMap.entries()).map(([name, stats]) => {
+                    const total = stats.delivered + stats.missed;
+                    const rate = total > 0 ? Math.round((stats.delivered / total) * 100) : 0;
+                    return (
+                      <TableRow key={name}>
+                        <TableCell className="font-medium text-sm">{name}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-farm-green/20 text-farm-green border-farm-green/30 text-xs">
+                            {stats.delivered}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {stats.missed > 0 ? (
+                            <Badge variant="destructive" className="text-xs">
+                              {stats.missed}
+                            </Badge>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">
+                          {stats.totalQty.toFixed(1)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-farm-green rounded-full"
+                                style={{ width: `${rate}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground">{rate}%</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Milk Production Summary */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Droplets className="w-4 h-4 text-primary" />
+            Milk Production — {months[selectedMonth - 1]} {selectedYear}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {milkRecords.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No milk production records for this period.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Quantity (L)</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {milkRecords.map((r) => (
+                    <TableRow key={r.id.toString()}>
+                      <TableCell className="text-sm">
+                        {nanosecondsToDate(r.date).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {r.quantityLiters.toFixed(1)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {r.notes || '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="font-semibold bg-muted/30">
+                    <TableCell>Total</TableCell>
+                    <TableCell>{totalMilkProduced.toFixed(1)}</TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

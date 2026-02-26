@@ -1,20 +1,19 @@
-import { DeliveryRecord, MilkRecord, Cattle, Customer, Variant_missed_delivered } from '../backend';
+import type { Customer, DeliveryRecord, MilkProductionRecord } from '../backend';
+import { Variant_missed_delivered } from '../backend';
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function nanosecondsToDateStr(ns: bigint): string {
-  const date = new Date(Number(ns / 1_000_000n));
-  return date.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+function triggerDownload(content: string, filename: string) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
-function escapeCsvField(value: string | number): string {
+function escapeCsvField(value: string | number | boolean): string {
   const str = String(value);
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`;
@@ -22,101 +21,92 @@ function escapeCsvField(value: string | number): string {
   return str;
 }
 
-function triggerDownload(csvContent: string, filename: string): void {
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+function nanosecondsToDateStr(ns: bigint): string {
+  const date = new Date(Number(ns / 1_000_000n));
+  return date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
+const months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// ─── Customer Monthly CSV (per-customer delivery records) ─────────────────────
+
 export function downloadCustomerMonthlyCSV(
+  deliveries: DeliveryRecord[],
   customerName: string,
   month: number,
   year: number,
-  records: DeliveryRecord[],
-): void {
-  const monthName = MONTHS[month - 1];
-  const safeCustomerName = customerName.replace(/[^a-zA-Z0-9_\- ]/g, '').trim().replace(/\s+/g, '_');
-  const filename = `${safeCustomerName}_${monthName}_${year}.csv`;
+) {
+  const monthName = months[month - 1];
+  const filename = `${customerName.replace(/[^a-z0-9]/gi, '_')}_${monthName}_${year}.csv`;
 
-  const headers = ['Date', 'Quantity (L)', 'Status', 'Delivery Boy', 'Notes'];
-
-  const rows = records.map((r) => [
-    escapeCsvField(nanosecondsToDateStr(r.date)),
-    escapeCsvField(r.quantityLiters.toFixed(2)),
-    escapeCsvField(r.status === Variant_missed_delivered.delivered ? 'Delivered' : 'Missed'),
-    escapeCsvField(r.deliveryBoyName),
-    escapeCsvField(r.notes || ''),
+  const headers = ['Date', 'Quantity (L)', 'Delivery Person', 'Status', 'Notes'];
+  const rows = deliveries.map((d) => [
+    escapeCsvField(nanosecondsToDateStr(d.date)),
+    escapeCsvField(d.quantityLiters.toFixed(2)),
+    escapeCsvField(d.deliveryBoyName),
+    escapeCsvField(d.status === Variant_missed_delivered.delivered ? 'Delivered' : 'Missed'),
+    escapeCsvField(d.notes),
   ]);
 
-  const deliveredRecords = records.filter((r) => r.status === Variant_missed_delivered.delivered);
-  const totalLiters = deliveredRecords.reduce((sum, r) => sum + r.quantityLiters, 0);
-  const deliveredCount = deliveredRecords.length;
-  const missedCount = records.length - deliveredCount;
+  const totalDelivered = deliveries
+    .filter((d) => d.status === Variant_missed_delivered.delivered)
+    .reduce((s, d) => s + d.quantityLiters, 0);
 
-  const csvLines = [
-    headers.join(','),
-    ...rows.map((row) => row.join(',')),
+  const summaryRow = [
+    escapeCsvField('TOTAL'),
+    escapeCsvField(totalDelivered.toFixed(2)),
     '',
-    `Summary for ${customerName} - ${monthName} ${year}`,
-    `Total Deliveries,${records.length}`,
-    `Delivered,${deliveredCount}`,
-    `Missed,${missedCount}`,
-    `Total Liters Delivered,${totalLiters.toFixed(2)}`,
+    '',
+    '',
   ];
 
-  triggerDownload(csvLines.join('\n'), filename);
-}
-
-export function exportMilkProductionRecordsToCSV(
-  records: MilkRecord[],
-  cattleList: Cattle[],
-): void {
-  const today = new Date().toISOString().split('T')[0];
-  const filename = `milk-production-${today}.csv`;
-
-  const cattleMap = new Map<string, Cattle>();
-  for (const c of cattleList) {
-    cattleMap.set(c.id.toString(), c);
-  }
-
-  const headers = ['Date', 'Cattle ID', 'Breed', 'Quantity (L)', 'Notes'];
-
-  const rows = records.map((r) => {
-    const cattleInfo = cattleMap.get(r.cattleId.toString());
-    return [
-      escapeCsvField(nanosecondsToDateStr(r.date)),
-      escapeCsvField(`#${r.cattleId.toString()}`),
-      escapeCsvField(cattleInfo ? cattleInfo.breed : 'Unknown'),
-      escapeCsvField(r.quantityLiters.toFixed(2)),
-      escapeCsvField(r.notes || ''),
-    ];
-  });
-
-  const totalLiters = records.reduce((sum, r) => sum + r.quantityLiters, 0);
-
-  const csvLines = [
+  const csvContent = [
     headers.join(','),
-    ...rows.map((row) => row.join(',')),
-    '',
-    `Total Records,${records.length}`,
-    `Total Quantity (L),${totalLiters.toFixed(2)}`,
-  ];
+    ...rows.map((r) => r.join(',')),
+    summaryRow.join(','),
+  ].join('\n');
 
-  triggerDownload(csvLines.join('\n'), filename);
+  triggerDownload(csvContent, filename);
 }
 
-export function exportCustomerRecordsToCSV(customers: Customer[]): void {
-  const today = new Date().toISOString().split('T')[0];
-  const filename = `customers-${today}.csv`;
+// ─── Milk Production Records CSV ──────────────────────────────────────────────
+
+export function exportMilkProductionRecordsToCSV(records: MilkProductionRecord[]) {
+  const filename = `milk_production_${new Date().toISOString().split('T')[0]}.csv`;
+
+  const headers = ['ID', 'Date', 'Quantity (L)', 'Notes'];
+  const rows = records.map((r) => [
+    escapeCsvField(r.id.toString()),
+    escapeCsvField(nanosecondsToDateStr(r.date)),
+    escapeCsvField(r.quantityLiters.toFixed(2)),
+    escapeCsvField(r.notes),
+  ]);
+
+  const total = records.reduce((s, r) => s + r.quantityLiters, 0);
+  const summaryRow = ['TOTAL', '', escapeCsvField(total.toFixed(2)), ''];
+
+  const csvContent = [
+    headers.join(','),
+    ...rows.map((r) => r.join(',')),
+    summaryRow.join(','),
+  ].join('\n');
+
+  triggerDownload(csvContent, filename);
+}
+
+// ─── Customer Records CSV ─────────────────────────────────────────────────────
+
+export function exportCustomerRecordsToCSV(customers: Customer[]) {
+  const filename = `customers_${new Date().toISOString().split('T')[0]}.csv`;
 
   const headers = ['ID', 'Name', 'Address', 'Phone', 'Status'];
-
   const rows = customers.map((c) => [
     escapeCsvField(c.id.toString()),
     escapeCsvField(c.name),
@@ -125,59 +115,67 @@ export function exportCustomerRecordsToCSV(customers: Customer[]): void {
     escapeCsvField(c.active ? 'Active' : 'Inactive'),
   ]);
 
-  const activeCount = customers.filter((c) => c.active).length;
-  const inactiveCount = customers.length - activeCount;
-
-  const csvLines = [
-    headers.join(','),
-    ...rows.map((row) => row.join(',')),
+  const summaryRow = [
+    escapeCsvField(`Total: ${customers.length}`),
+    escapeCsvField(`Active: ${customers.filter((c) => c.active).length}`),
     '',
-    `Total Customers,${customers.length}`,
-    `Active,${activeCount}`,
-    `Inactive,${inactiveCount}`,
+    '',
+    '',
   ];
 
-  triggerDownload(csvLines.join('\n'), filename);
+  const csvContent = [
+    headers.join(','),
+    ...rows.map((r) => r.join(',')),
+    summaryRow.join(','),
+  ].join('\n');
+
+  triggerDownload(csvContent, filename);
 }
+
+// ─── Delivery Records CSV ─────────────────────────────────────────────────────
 
 export function exportDeliveryRecordsToCSV(
   records: DeliveryRecord[],
   customers: Customer[],
-): void {
-  const today = new Date().toISOString().split('T')[0];
-  const filename = `delivery-records-${today}.csv`;
+  month: number,
+  year: number,
+) {
+  const monthName = months[month - 1];
+  const filename = `deliveries_${monthName}_${year}.csv`;
 
-  const customerMap = new Map<string, Customer>();
-  for (const c of customers) {
-    customerMap.set(c.id.toString(), c);
-  }
-
-  const headers = ['Date', 'Customer', 'Delivery Boy', 'Quantity (L)', 'Status', 'Notes'];
-
+  const headers = ['ID', 'Date', 'Customer Principal', 'Delivery Person', 'Quantity (L)', 'Status', 'Notes'];
   const rows = records.map((r) => {
-    const customer = customerMap.get(r.customerId.toString());
+    const principalStr = r.customerPrincipal ? r.customerPrincipal.toString() : 'Unknown';
     return [
+      escapeCsvField(r.id.toString()),
       escapeCsvField(nanosecondsToDateStr(r.date)),
-      escapeCsvField(customer ? customer.name : `Customer #${r.customerId.toString()}`),
+      escapeCsvField(principalStr),
       escapeCsvField(r.deliveryBoyName),
       escapeCsvField(r.quantityLiters.toFixed(2)),
       escapeCsvField(r.status === Variant_missed_delivered.delivered ? 'Delivered' : 'Missed'),
-      escapeCsvField(r.notes || ''),
+      escapeCsvField(r.notes),
     ];
   });
 
-  const deliveredRecords = records.filter((r) => r.status === Variant_missed_delivered.delivered);
-  const totalLiters = deliveredRecords.reduce((sum, r) => sum + r.quantityLiters, 0);
+  const totalDelivered = records
+    .filter((r) => r.status === Variant_missed_delivered.delivered)
+    .reduce((s, r) => s + r.quantityLiters, 0);
 
-  const csvLines = [
-    headers.join(','),
-    ...rows.map((row) => row.join(',')),
+  const summaryRow = [
+    'TOTAL',
     '',
-    `Total Deliveries,${records.length}`,
-    `Delivered,${deliveredRecords.length}`,
-    `Missed,${records.length - deliveredRecords.length}`,
-    `Total Liters Delivered,${totalLiters.toFixed(2)}`,
+    '',
+    '',
+    escapeCsvField(totalDelivered.toFixed(2)),
+    escapeCsvField(`${records.filter((r) => r.status === Variant_missed_delivered.delivered).length} delivered`),
+    '',
   ];
 
-  triggerDownload(csvLines.join('\n'), filename);
+  const csvContent = [
+    headers.join(','),
+    ...rows.map((r) => r.join(',')),
+    summaryRow.join(','),
+  ].join('\n');
+
+  triggerDownload(csvContent, filename);
 }

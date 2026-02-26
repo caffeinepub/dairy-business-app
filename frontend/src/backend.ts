@@ -89,6 +89,15 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface CustomerFeedback {
+    resolved: boolean;
+    deliveryId: bigint;
+    customerPrincipal: Principal;
+    message: string;
+    timestamp: Time;
+    flagged: boolean;
+    feedbackId: bigint;
+}
 export interface MilkRecord {
     id: bigint;
     date: Time;
@@ -99,11 +108,11 @@ export interface MilkRecord {
 export interface DeliveryRecord {
     id: bigint;
     status: Variant_missed_delivered;
+    customerPrincipal?: Principal;
     date: Time;
     quantityLiters: number;
     deliveryBoyName: string;
     notes: string;
-    customerId: bigint;
 }
 export type Time = bigint;
 export interface Cattle {
@@ -164,7 +173,7 @@ export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addCattle(breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string, status: CattleStatus): Promise<bigint | null>;
     addCustomer(name: string, address: string, phone: string, active: boolean): Promise<bigint | null>;
-    addDeliveryRecord(customerId: bigint, deliveryBoyName: string, date: Time, quantityLiters: number, status: Variant_missed_delivered, notes: string): Promise<bigint>;
+    addDeliveryRecord(customerPrincipal: Principal, deliveryBoyName: string, date: Time, quantityLiters: number, status: Variant_missed_delivered, notes: string): Promise<bigint>;
     addMilkProductionRecord(date: Time, quantityLiters: number, notes: string): Promise<bigint>;
     addMilkRecord(cattleId: bigint, date: Time, quantityLiters: number, notes: string): Promise<bigint>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
@@ -182,16 +191,20 @@ export interface backendInterface {
     getCattleByPurchaseDateRange(startDate: Time, endDate: Time): Promise<Array<Cattle>>;
     getCattleByStatus(status: CattleStatus): Promise<Array<Cattle>>;
     getCustomers(): Promise<Array<Customer>>;
-    getDeliveryRecordsByCustomer(customerId: bigint): Promise<Array<DeliveryRecord>>;
+    getDeliveryRecordsByCustomer(customerPrincipal: Principal): Promise<Array<DeliveryRecord>>;
     getDeliveryRecordsByDate(date: Time): Promise<Array<DeliveryRecord>>;
     getDeliveryRecordsByMonth(month: bigint, year: bigint): Promise<Array<DeliveryRecord>>;
+    getFlaggedFeedback(): Promise<Array<CustomerFeedback>>;
     getMilkProductionRecords(): Promise<Array<MilkProductionRecord>>;
     getMilkRecordsByCattle(cattleId: bigint): Promise<Array<MilkRecord>>;
     getMilkRecordsByDateRange(startDate: Time, endDate: Time): Promise<Array<MilkRecord>>;
     getMilkRecordsByMonth(month: bigint, year: bigint): Promise<Array<MilkProductionRecord>>;
+    getMyDeliveries(): Promise<Array<DeliveryRecord>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    resolveFeedback(feedbackId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    submitFeedback(deliveryId: bigint, message: string): Promise<void>;
     updateCattle(cattleId: bigint, breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string, status: CattleStatus): Promise<void>;
     updateCustomer(customerId: bigint, name: string, address: string, phone: string, active: boolean): Promise<void>;
 }
@@ -240,7 +253,7 @@ export class Backend implements backendInterface {
             return from_candid_opt_n5(this._uploadFile, this._downloadFile, result);
         }
     }
-    async addDeliveryRecord(arg0: bigint, arg1: string, arg2: Time, arg3: number, arg4: Variant_missed_delivered, arg5: string): Promise<bigint> {
+    async addDeliveryRecord(arg0: Principal, arg1: string, arg2: Time, arg3: number, arg4: Variant_missed_delivered, arg5: string): Promise<bigint> {
         if (this.processError) {
             try {
                 const result = await this.actor.addDeliveryRecord(arg0, arg1, arg2, arg3, to_candid_variant_n6(this._uploadFile, this._downloadFile, arg4), arg5);
@@ -492,7 +505,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getDeliveryRecordsByCustomer(arg0: bigint): Promise<Array<DeliveryRecord>> {
+    async getDeliveryRecordsByCustomer(arg0: Principal): Promise<Array<DeliveryRecord>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getDeliveryRecordsByCustomer(arg0);
@@ -532,6 +545,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getDeliveryRecordsByMonth(arg0, arg1);
             return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getFlaggedFeedback(): Promise<Array<CustomerFeedback>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getFlaggedFeedback();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getFlaggedFeedback();
+            return result;
         }
     }
     async getMilkProductionRecords(): Promise<Array<MilkProductionRecord>> {
@@ -590,6 +617,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getMyDeliveries(): Promise<Array<DeliveryRecord>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMyDeliveries();
+                return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMyDeliveries();
+            return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
@@ -618,6 +659,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async resolveFeedback(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.resolveFeedback(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.resolveFeedback(arg0);
+            return result;
+        }
+    }
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
             try {
@@ -629,6 +684,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(arg0);
+            return result;
+        }
+    }
+    async submitFeedback(arg0: bigint, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.submitFeedback(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.submitFeedback(arg0, arg1);
             return result;
         }
     }
@@ -679,6 +748,9 @@ function from_candid_UserRole_n17(_uploadFile: (file: ExternalBlob) => Promise<U
 function from_candid_opt_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
     return value.length === 0 ? null : value[0];
 }
+function from_candid_opt_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Principal]): Principal | null {
+    return value.length === 0 ? null : value[0];
+}
 function from_candid_opt_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
 }
@@ -722,28 +794,28 @@ function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promise<Uin
     } | {
         delivered: null;
     };
+    customerPrincipal: [] | [Principal];
     date: _Time;
     quantityLiters: number;
     deliveryBoyName: string;
     notes: string;
-    customerId: bigint;
 }): {
     id: bigint;
     status: Variant_missed_delivered;
+    customerPrincipal?: Principal;
     date: Time;
     quantityLiters: number;
     deliveryBoyName: string;
     notes: string;
-    customerId: bigint;
 } {
     return {
         id: value.id,
         status: from_candid_variant_n22(_uploadFile, _downloadFile, value.status),
+        customerPrincipal: record_opt_to_undefined(from_candid_opt_n23(_uploadFile, _downloadFile, value.customerPrincipal)),
         date: value.date,
         quantityLiters: value.quantityLiters,
         deliveryBoyName: value.deliveryBoyName,
-        notes: value.notes,
-        customerId: value.customerId
+        notes: value.notes
     };
 }
 function from_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {

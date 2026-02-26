@@ -7,9 +7,10 @@ import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
-  // Access control state
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
@@ -40,7 +41,6 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  // Customer management types and logic
   type Customer = {
     id : Nat;
     name : Text;
@@ -51,7 +51,7 @@ actor {
 
   type DeliveryRecord = {
     id : Nat;
-    customerId : Nat;
+    customerPrincipal : ?Principal;
     deliveryBoyName : Text;
     date : Time.Time;
     quantityLiters : Float;
@@ -77,7 +77,6 @@ actor {
     notes : Text;
   };
 
-  // Cattle management types and logic
   type CattleStatus = { #active; #inactive };
 
   type Cattle = {
@@ -102,30 +101,14 @@ actor {
     #recovered;
   };
 
-  type BreedReport = {
-    totalCattle : Nat;
-    averageMilkProduction : Float;
-    healthyCount : Nat;
-    sickCount : Nat;
-    recuperatedCount : Nat;
-  };
-
-  type HealthReport = {
-    healthyCount : Nat;
-    sickCount : Nat;
-    recuperatedCount : Nat;
-    averageDailyMilkProduction : Float;
-    sickBreeds : [Text];
-    averageRecoveryTimeDays : Float;
-    ageWiseRecoveryStats : [AgeGroupRecoveryStats];
-  };
-
-  type AgeGroupRecoveryStats = {
-    ageRange : (Nat, Nat);
-    recoveryCount : Nat;
-    medianRecoveryTimeDays : Float;
-    minRecoveryTimeDays : Float;
-    maxRecoveryTimeDays : Float;
+  type CustomerFeedback = {
+    feedbackId : Nat;
+    deliveryId : Nat;
+    customerPrincipal : Principal;
+    message : Text;
+    timestamp : Time.Time;
+    flagged : Bool;
+    resolved : Bool;
   };
 
   module Cattle {
@@ -165,16 +148,19 @@ actor {
   let milkProductionRecords = Map.empty<Nat, MilkProductionRecord>();
   let cattleRecords = Map.empty<Nat, Cattle>();
   let milkRecords = Map.empty<Nat, MilkRecord>();
+  let feedbackRecords = Map.empty<Nat, CustomerFeedback>();
 
   var nextCustomerId = 1;
   var nextDeliveryRecordId = 1;
   var nextMilkRecordId = 1;
   var nextCattleId = 1;
   var nextMilkRecordIdMain = 1;
+  var nextFeedbackId = 1;
 
+  // Admin-only: manage customers
   public shared ({ caller }) func addCustomer(name : Text, address : Text, phone : Text, active : Bool) : async ?Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add customers");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add customers");
     };
 
     let id = nextCustomerId;
@@ -207,16 +193,18 @@ actor {
     };
   };
 
+  // Admin-only: view all customers
   public query ({ caller }) func getCustomers() : async [Customer] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view customers");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all customers");
     };
     customers.values().toArray();
   };
 
+  // Admin-only: update customers
   public shared ({ caller }) func updateCustomer(customerId : Nat, name : Text, address : Text, phone : Text, active : Bool) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update customers");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update customers");
     };
     switch (customers.get(customerId)) {
       case (null) { Runtime.trap("Customer not found") };
@@ -233,8 +221,9 @@ actor {
     };
   };
 
+  // Admin-only: add delivery records
   public shared ({ caller }) func addDeliveryRecord(
-    customerId : Nat,
+    customerPrincipal : Principal,
     deliveryBoyName : Text,
     date : Time.Time,
     quantityLiters : Float,
@@ -244,11 +233,8 @@ actor {
     },
     notes : Text,
   ) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add delivery records");
-    };
-    if (not customers.containsKey(customerId)) {
-      Runtime.trap("Customer not found");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add delivery records");
     };
 
     let id = nextDeliveryRecordId;
@@ -256,7 +242,7 @@ actor {
 
     let record : DeliveryRecord = {
       id;
-      customerId;
+      customerPrincipal = ?customerPrincipal;
       deliveryBoyName;
       date;
       quantityLiters;
@@ -268,27 +254,48 @@ actor {
     id;
   };
 
+  // Admin-only: view all delivery records by date
   public query ({ caller }) func getDeliveryRecordsByDate(date : Time.Time) : async [DeliveryRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view delivery records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all delivery records by date");
     };
     deliveryRecords.values().toArray().sort().filter(func(r : DeliveryRecord) : Bool { getDate(r.date) == getDate(date) });
   };
 
-  public query ({ caller }) func getDeliveryRecordsByCustomer(customerId : Nat) : async [DeliveryRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view delivery records");
+  // Admin can view any customer's deliveries; a user can only view their own
+  public query ({ caller }) func getDeliveryRecordsByCustomer(customerPrincipal : Principal) : async [DeliveryRecord] {
+    if (caller != customerPrincipal and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Can only view your own delivery records");
     };
-    if (not customers.containsKey(customerId)) {
-      Runtime.trap("Customer not found");
-    };
-
-    deliveryRecords.values().toArray().sort().filter(func(r : DeliveryRecord) : Bool { r.customerId == customerId });
+    deliveryRecords.values().toArray().sort().filter(
+      func(r : DeliveryRecord) : Bool {
+        switch (r.customerPrincipal) {
+          case (?p) { p == customerPrincipal };
+          case (null) { false };
+        };
+      }
+    );
   };
 
-  public query ({ caller }) func getDeliveryRecordsByMonth(month : Nat, year : Nat) : async [DeliveryRecord] {
+  // Customers can view their own deliveries
+  public query ({ caller }) func getMyDeliveries() : async [DeliveryRecord] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view delivery records");
+      Runtime.trap("Unauthorized: Only users can access their deliveries");
+    };
+    deliveryRecords.values().toArray().sort().filter(
+      func(r : DeliveryRecord) : Bool {
+        switch (r.customerPrincipal) {
+          case (?p) { p == caller };
+          case (null) { false };
+        };
+      }
+    );
+  };
+
+  // Admin-only: view delivery records by month
+  public query ({ caller }) func getDeliveryRecordsByMonth(month : Nat, year : Nat) : async [DeliveryRecord] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all delivery records by month");
     };
     deliveryRecords.values().toArray().filter(
       func(record) {
@@ -298,13 +305,14 @@ actor {
     );
   };
 
+  // Admin-only: add milk production records
   public shared ({ caller }) func addMilkProductionRecord(
     date : Time.Time,
     quantityLiters : Float,
     notes : Text,
   ) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add milk production records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add milk production records");
     };
     let id = nextMilkRecordId;
     nextMilkRecordId += 1;
@@ -320,16 +328,18 @@ actor {
     id;
   };
 
+  // Admin-only: view milk production records
   public query ({ caller }) func getMilkProductionRecords() : async [MilkProductionRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view milk production records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view milk production records");
     };
     milkProductionRecords.values().toArray();
   };
 
+  // Admin-only: view milk records by month
   public query ({ caller }) func getMilkRecordsByMonth(month : Nat, year : Nat) : async [MilkProductionRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view milk production records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view milk production records by month");
     };
     milkProductionRecords.values().toArray().filter(
       func(record) {
@@ -339,14 +349,15 @@ actor {
     );
   };
 
+  // Admin-only: add milk records per cattle
   public shared ({ caller }) func addMilkRecord(
     cattleId : Nat,
     date : Time.Time,
     quantityLiters : Float,
     notes : Text,
   ) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add milk records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add milk records");
     };
     if (not cattleRecords.containsKey(cattleId)) {
       Runtime.trap("Cattle record not found");
@@ -367,29 +378,33 @@ actor {
     id;
   };
 
+  // Admin-only: view all milk records
   public query ({ caller }) func getAllMilkRecords() : async [MilkRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view milk records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all milk records");
     };
     milkRecords.values().toArray();
   };
 
+  // Admin-only: view milk records by cattle
   public query ({ caller }) func getMilkRecordsByCattle(cattleId : Nat) : async [MilkRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view milk records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view milk records by cattle");
     };
     milkRecords.values().toArray().filter(func(r : MilkRecord) : Bool { r.cattleId == cattleId });
   };
 
+  // Admin-only: view milk records by date range
   public query ({ caller }) func getMilkRecordsByDateRange(startDate : Time.Time, endDate : Time.Time) : async [MilkRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view milk records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view milk records by date range");
     };
     milkRecords.values().toArray().filter(
       func(r) { r.date >= startDate and r.date <= endDate }
     );
   };
 
+  // Admin-only: add cattle
   public shared ({ caller }) func addCattle(
     breed : Text,
     ageMonths : Nat,
@@ -400,8 +415,8 @@ actor {
     notes : Text,
     status : CattleStatus,
   ) : async ?Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add cattle records");
     };
 
     let id = nextCattleId;
@@ -438,13 +453,15 @@ actor {
     };
   };
 
+  // Admin-only: view all cattle
   public query ({ caller }) func getAllCattle() : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray();
   };
 
+  // Admin-only: update cattle
   public shared ({ caller }) func updateCattle(
     cattleId : Nat,
     breed : Text,
@@ -456,8 +473,8 @@ actor {
     notes : Text,
     status : CattleStatus,
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update cattle");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update cattle");
     };
     switch (cattleRecords.get(cattleId)) {
       case (null) { Runtime.trap("Cattle record not found") };
@@ -478,30 +495,34 @@ actor {
     };
   };
 
+  // Admin-only: filter cattle by breed
   public query ({ caller }) func getCattleByBreed(breed : Text) : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray().filter(func(r) { r.breed == breed });
   };
 
+  // Admin-only: filter cattle by health status
   public query ({ caller }) func getCattleByHealthStatus(healthStatus : HealthStatus) : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray().filter(func(r) { r.healthStatus == healthStatus });
   };
 
+  // Admin-only: get all healthy cattle
   public query ({ caller }) func getAllHealthyCattle() : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray().filter(func(r) { r.healthStatus == #healthy });
   };
 
+  // Admin-only: get all sick cattle
   public query ({ caller }) func getAllSickCattle() : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray().filter(
       func(r) {
@@ -513,47 +534,121 @@ actor {
     );
   };
 
+  // Admin-only: get all recovered cattle
   public query ({ caller }) func getAllRecoveredCattle() : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray().filter(func(r) { r.healthStatus == #recovered });
   };
 
+  // Admin-only: filter cattle by age range
   public query ({ caller }) func getCattleByAgeRange(minAge : Nat, maxAge : Nat) : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray().filter(
       func(r) { r.ageMonths >= minAge and r.ageMonths <= maxAge }
     );
   };
 
+  // Admin-only: filter cattle by milk production range
   public query ({ caller }) func getCattleByMilkProductionRange(minLiters : Float, maxLiters : Float) : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray().filter(
       func(r) { r.dailyMilkProductionLiters >= minLiters and r.dailyMilkProductionLiters <= maxLiters }
     );
   };
 
+  // Admin-only: filter cattle by purchase date range
   public query ({ caller }) func getCattleByPurchaseDateRange(startDate : Time.Time, endDate : Time.Time) : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray().filter(
       func(r) { r.purchaseDate >= startDate and r.purchaseDate <= endDate }
     );
   };
 
+  // Admin-only: filter cattle by status
   public query ({ caller }) func getCattleByStatus(
     status : CattleStatus
   ) : async [Cattle] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cattle records");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view cattle records");
     };
     cattleRecords.values().toArray().filter(func(r) { r.status == status });
+  };
+
+  // Customer-only: submit feedback on a delivered record that was not received
+  // Only the customer linked to the delivery can submit feedback
+  public shared ({ caller }) func submitFeedback(deliveryId : Nat, message : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only customers can submit feedback");
+    };
+    switch (deliveryRecords.get(deliveryId)) {
+      case (null) { Runtime.trap("Delivery record not found") };
+      case (?record) {
+        if (record.customerPrincipal == null or record.customerPrincipal != ?caller) {
+          Runtime.trap("Unauthorized: Not authorized for this delivery");
+        };
+        switch (record.status) {
+          case (#delivered) {
+            let feedbackId = nextFeedbackId;
+            nextFeedbackId += 1;
+
+            let feedback : CustomerFeedback = {
+              feedbackId;
+              deliveryId;
+              customerPrincipal = caller;
+              message;
+              timestamp = Time.now();
+              flagged = true;
+              resolved = false;
+            };
+            feedbackRecords.add(feedbackId, feedback);
+          };
+          case (_) { Runtime.trap("Can only submit feedback for delivered status") };
+        };
+      };
+    };
+  };
+
+  // Admin-only: read all flagged feedback
+  public query ({ caller }) func getFlaggedFeedback() : async [CustomerFeedback] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can view flagged feedback");
+    };
+    feedbackRecords.values().toArray().filter(func(f) { f.flagged and not f.resolved });
+  };
+
+  // Admin-only: resolve flagged feedback and update delivery status
+  public shared ({ caller }) func resolveFeedback(feedbackId : Nat) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can resolve feedback");
+    };
+    switch (feedbackRecords.get(feedbackId)) {
+      case (null) { Runtime.trap("Feedback record not found") };
+      case (?feedback) {
+        switch (deliveryRecords.get(feedback.deliveryId)) {
+          case (null) { Runtime.trap("No matching delivery record") };
+          case (?record) {
+            let updatedFeedback = { feedback with resolved = true };
+            feedbackRecords.add(feedbackId, updatedFeedback);
+
+            switch (record.status) {
+              case (#delivered) {
+                let updatedRecord = { record with notes = record.notes # "\nStatus updated: Not received - " # feedback.message };
+                deliveryRecords.add(record.id, updatedRecord);
+              };
+              case (_) { };
+            };
+          };
+        };
+      };
+    };
   };
 
   func getDate(timestamp : Time.Time) : Time.Time {

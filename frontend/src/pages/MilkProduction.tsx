@@ -81,7 +81,8 @@ export default function MilkProduction() {
   const totalLiters = filteredRecords.reduce((sum, r) => sum + r.quantityLiters, 0);
 
   const handleDownloadCSV = () => {
-    exportMilkProductionRecordsToCSV(filteredRecords, cattle);
+    // exportMilkProductionRecordsToCSV accepts only the records array
+    exportMilkProductionRecordsToCSV(filteredRecords);
   };
 
   const handleClearFilters = () => {

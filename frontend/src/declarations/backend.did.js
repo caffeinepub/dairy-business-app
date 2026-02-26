@@ -56,11 +56,20 @@ export const Customer = IDL.Record({
 export const DeliveryRecord = IDL.Record({
   'id' : IDL.Nat,
   'status' : IDL.Variant({ 'missed' : IDL.Null, 'delivered' : IDL.Null }),
+  'customerPrincipal' : IDL.Opt(IDL.Principal),
   'date' : Time,
   'quantityLiters' : IDL.Float64,
   'deliveryBoyName' : IDL.Text,
   'notes' : IDL.Text,
-  'customerId' : IDL.Nat,
+});
+export const CustomerFeedback = IDL.Record({
+  'resolved' : IDL.Bool,
+  'deliveryId' : IDL.Nat,
+  'customerPrincipal' : IDL.Principal,
+  'message' : IDL.Text,
+  'timestamp' : Time,
+  'flagged' : IDL.Bool,
+  'feedbackId' : IDL.Nat,
 });
 export const MilkProductionRecord = IDL.Record({
   'id' : IDL.Nat,
@@ -92,7 +101,7 @@ export const idlService = IDL.Service({
     ),
   'addDeliveryRecord' : IDL.Func(
       [
-        IDL.Nat,
+        IDL.Principal,
         IDL.Text,
         Time,
         IDL.Float64,
@@ -144,7 +153,7 @@ export const idlService = IDL.Service({
   'getCattleByStatus' : IDL.Func([CattleStatus], [IDL.Vec(Cattle)], ['query']),
   'getCustomers' : IDL.Func([], [IDL.Vec(Customer)], ['query']),
   'getDeliveryRecordsByCustomer' : IDL.Func(
-      [IDL.Nat],
+      [IDL.Principal],
       [IDL.Vec(DeliveryRecord)],
       ['query'],
     ),
@@ -158,6 +167,7 @@ export const idlService = IDL.Service({
       [IDL.Vec(DeliveryRecord)],
       ['query'],
     ),
+  'getFlaggedFeedback' : IDL.Func([], [IDL.Vec(CustomerFeedback)], ['query']),
   'getMilkProductionRecords' : IDL.Func(
       [],
       [IDL.Vec(MilkProductionRecord)],
@@ -178,13 +188,16 @@ export const idlService = IDL.Service({
       [IDL.Vec(MilkProductionRecord)],
       ['query'],
     ),
+  'getMyDeliveries' : IDL.Func([], [IDL.Vec(DeliveryRecord)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'resolveFeedback' : IDL.Func([IDL.Nat], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'submitFeedback' : IDL.Func([IDL.Nat, IDL.Text], [], []),
   'updateCattle' : IDL.Func(
       [
         IDL.Nat,
@@ -258,11 +271,20 @@ export const idlFactory = ({ IDL }) => {
   const DeliveryRecord = IDL.Record({
     'id' : IDL.Nat,
     'status' : IDL.Variant({ 'missed' : IDL.Null, 'delivered' : IDL.Null }),
+    'customerPrincipal' : IDL.Opt(IDL.Principal),
     'date' : Time,
     'quantityLiters' : IDL.Float64,
     'deliveryBoyName' : IDL.Text,
     'notes' : IDL.Text,
-    'customerId' : IDL.Nat,
+  });
+  const CustomerFeedback = IDL.Record({
+    'resolved' : IDL.Bool,
+    'deliveryId' : IDL.Nat,
+    'customerPrincipal' : IDL.Principal,
+    'message' : IDL.Text,
+    'timestamp' : Time,
+    'flagged' : IDL.Bool,
+    'feedbackId' : IDL.Nat,
   });
   const MilkProductionRecord = IDL.Record({
     'id' : IDL.Nat,
@@ -294,7 +316,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'addDeliveryRecord' : IDL.Func(
         [
-          IDL.Nat,
+          IDL.Principal,
           IDL.Text,
           Time,
           IDL.Float64,
@@ -350,7 +372,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getCustomers' : IDL.Func([], [IDL.Vec(Customer)], ['query']),
     'getDeliveryRecordsByCustomer' : IDL.Func(
-        [IDL.Nat],
+        [IDL.Principal],
         [IDL.Vec(DeliveryRecord)],
         ['query'],
       ),
@@ -364,6 +386,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(DeliveryRecord)],
         ['query'],
       ),
+    'getFlaggedFeedback' : IDL.Func([], [IDL.Vec(CustomerFeedback)], ['query']),
     'getMilkProductionRecords' : IDL.Func(
         [],
         [IDL.Vec(MilkProductionRecord)],
@@ -384,13 +407,16 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(MilkProductionRecord)],
         ['query'],
       ),
+    'getMyDeliveries' : IDL.Func([], [IDL.Vec(DeliveryRecord)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'resolveFeedback' : IDL.Func([IDL.Nat], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'submitFeedback' : IDL.Func([IDL.Nat, IDL.Text], [], []),
     'updateCattle' : IDL.Func(
         [
           IDL.Nat,

@@ -1,10 +1,19 @@
 import { useState, useMemo } from 'react';
-import { Truck, Plus, Filter, MessageCircle, Download, X } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Principal } from '@icp-sdk/core/principal';
+import { toast } from 'sonner';
+import { Plus, Download, Truck, CheckCircle2, XCircle, Calendar, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -12,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -22,315 +30,272 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  useGetCustomers,
   useGetDeliveryRecordsByDate,
   useGetDeliveryRecordsByMonth,
   useAddDeliveryRecord,
-  nanosecondsToDate,
+  useGetCustomers,
   dateToNanoseconds,
+  nanosecondsToDate,
+  getTodayNanoseconds,
 } from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import WhatsAppMessageModal from '../components/WhatsAppMessageModal';
-import DeliveryQuantityChart from '../components/DeliveryQuantityChart';
-import { exportDeliveryRecordsToCSV } from '../utils/csvExport';
-import type { DeliveryRecord, Customer } from '../backend';
 import { Variant_missed_delivered } from '../backend';
+import type { Customer, DeliveryRecord } from '../backend';
+import { exportDeliveryRecordsToCSV } from '../utils/csvExport';
+import DeliveryQuantityChart from '../components/DeliveryQuantityChart';
+import WhatsAppMessageModal from '../components/WhatsAppMessageModal';
 
 export default function DeliveryReports() {
-  const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity;
-
-  const { data: customers = [] } = useGetCustomers();
-  const addDeliveryRecord = useAddDeliveryRecord();
-
+  const today = useMemo(() => new Date(), []);
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
-  const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [filterStart, setFilterStart] = useState('');
-  const [filterEnd, setFilterEnd] = useState('');
-
-  const { data: deliveries = [], isLoading } = useGetDeliveryRecordsByDate(
-    new Date(filterDate || new Date().toISOString().split('T')[0]),
-  );
-
-  // Fetch current month's deliveries for the chart
-  const { data: monthDeliveries = [] } = useGetDeliveryRecordsByMonth(currentMonth, currentYear);
+  const [filterMonth, setFilterMonth] = useState(currentMonth);
+  const [filterYear, setFilterYear] = useState(currentYear);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
 
   // Form state
   const [formCustomerId, setFormCustomerId] = useState('');
+  const [formCustomerPrincipal, setFormCustomerPrincipal] = useState('');
   const [formDeliveryBoy, setFormDeliveryBoy] = useState('');
-  const [formDate, setFormDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [formQty, setFormQty] = useState('');
-  const [formStatus, setFormStatus] = useState<'delivered' | 'missed'>('delivered');
+  const [formDate, setFormDate] = useState(today.toISOString().split('T')[0]);
+  const [formQuantity, setFormQuantity] = useState('');
+  const [formStatus, setFormStatus] = useState<Variant_missed_delivered>(
+    Variant_missed_delivered.delivered,
+  );
   const [formNotes, setFormNotes] = useState('');
 
   // WhatsApp modal state
-  const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
-  const [whatsAppModalData, setWhatsAppModalData] = useState<{
-    customer: Customer;
-    delivery: DeliveryRecord;
-  } | null>(null);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
+  const [whatsappCustomer, setWhatsappCustomer] = useState<Customer | null>(null);
+  const [whatsappDelivery, setWhatsappDelivery] = useState<DeliveryRecord | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const { data: deliveriesByDate = [] } = useGetDeliveryRecordsByDate(today);
+  const { data: monthDeliveries = [] } = useGetDeliveryRecordsByMonth(filterMonth, filterYear);
+  const { data: customers = [] } = useGetCustomers();
+  const addDelivery = useAddDeliveryRecord();
+
+  const handleAddDelivery = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formCustomerId || !formDeliveryBoy || !formDate || !formQty) return;
 
-    await addDeliveryRecord.mutateAsync({
-      customerId: BigInt(formCustomerId),
-      deliveryBoyName: formDeliveryBoy,
-      date: dateToNanoseconds(new Date(formDate)),
-      quantityLiters: parseFloat(formQty),
-      status:
-        formStatus === 'delivered'
-          ? Variant_missed_delivered.delivered
-          : Variant_missed_delivered.missed,
-      notes: formNotes,
-    });
+    if (!formCustomerPrincipal.trim()) {
+      toast.error('Please enter the customer principal ID.');
+      return;
+    }
 
-    setFormCustomerId('');
-    setFormDeliveryBoy('');
-    setFormQty('');
-    setFormNotes('');
+    let principal: Principal;
+    try {
+      principal = Principal.fromText(formCustomerPrincipal.trim());
+    } catch {
+      toast.error('Invalid principal ID format. Please check and try again.');
+      return;
+    }
+
+    try {
+      await addDelivery.mutateAsync({
+        customerPrincipal: principal,
+        deliveryBoyName: formDeliveryBoy,
+        date: dateToNanoseconds(new Date(formDate)),
+        quantityLiters: parseFloat(formQuantity),
+        status: formStatus,
+        notes: formNotes,
+      });
+
+      toast.success('Delivery record added successfully!');
+
+      // Reset form
+      setFormCustomerId('');
+      setFormCustomerPrincipal('');
+      setFormDeliveryBoy('');
+      setFormDate(today.toISOString().split('T')[0]);
+      setFormQuantity('');
+      setFormStatus(Variant_missed_delivered.delivered);
+      setFormNotes('');
+      setAddOpen(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to add delivery: ${msg}`);
+    }
   };
 
-  const getCustomerName = (customerId: bigint) => {
-    const c = customers.find((c) => c.id === customerId);
-    return c ? c.name : `Customer #${customerId.toString()}`;
-  };
+  const filteredMonthDeliveries = useMemo(() => {
+    if (!searchQuery.trim()) return monthDeliveries;
+    const q = searchQuery.toLowerCase();
+    return monthDeliveries.filter(
+      (d) =>
+        d.deliveryBoyName.toLowerCase().includes(q) ||
+        d.notes.toLowerCase().includes(q) ||
+        (d.customerPrincipal?.toString() ?? '').toLowerCase().includes(q),
+    );
+  }, [monthDeliveries, searchQuery]);
 
-  const getCustomer = (customerId: bigint): Customer | undefined => {
-    return customers.find((c) => c.id === customerId);
-  };
-
-  // Apply optional date range filter on top of the date-filtered deliveries
-  const filteredDeliveries = useMemo(() => {
-    if (!filterStart && !filterEnd) return deliveries;
-    return deliveries.filter((d) => {
-      const date = nanosecondsToDate(d.date);
-      const dateStr = date.toISOString().split('T')[0];
-      if (filterStart && dateStr < filterStart) return false;
-      if (filterEnd && dateStr > filterEnd) return false;
-      return true;
-    });
-  }, [deliveries, filterStart, filterEnd]);
-
-  const totalDelivered = filteredDeliveries.filter(
+  const totalDelivered = monthDeliveries.filter(
     (d) => d.status === Variant_missed_delivered.delivered,
   ).length;
-  const totalMissed = filteredDeliveries.filter(
+  const totalMissed = monthDeliveries.filter(
     (d) => d.status === Variant_missed_delivered.missed,
   ).length;
-  const totalLiters = filteredDeliveries
+  const totalQuantity = monthDeliveries
     .filter((d) => d.status === Variant_missed_delivered.delivered)
     .reduce((sum, d) => sum + d.quantityLiters, 0);
 
-  const handleClearFilters = () => {
-    setFilterStart('');
-    setFilterEnd('');
-    setFilterDate(new Date().toISOString().split('T')[0]);
+  const todayNs = getTodayNanoseconds();
+  const tomorrowNs = todayNs + 86_400_000_000_000n;
+  const _todayDeliveries = deliveriesByDate.filter(
+    (d) => d.date >= todayNs && d.date < tomorrowNs,
+  );
+
+  const handleExportCSV = () => {
+    exportDeliveryRecordsToCSV(monthDeliveries, customers, filterMonth, filterYear);
+    toast.success('CSV exported successfully!');
   };
 
-  const handleDownloadCSV = () => {
-    exportDeliveryRecordsToCSV(filteredDeliveries, customers);
-  };
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground font-display">Delivery Reports</h1>
-        <p className="text-muted-foreground text-sm mt-1">Log and track daily milk deliveries</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Log Form */}
-        {isAuthenticated && (
-          <Card className="lg:col-span-1">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Plus className="w-4 h-4 text-primary" />
-                Log Delivery
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Customer</Label>
-                  <Select value={formCustomerId} onValueChange={setFormCustomerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((c) => (
-                        <SelectItem key={c.id.toString()} value={c.id.toString()}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Delivery Boy</Label>
-                  <Input
-                    placeholder="Name"
-                    value={formDeliveryBoy}
-                    onChange={(e) => setFormDeliveryBoy(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Date</Label>
-                  <Input
-                    type="date"
-                    value={formDate}
-                    onChange={(e) => setFormDate(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Quantity (Liters)</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder="e.g. 5.0"
-                    value={formQty}
-                    onChange={(e) => setFormQty(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Status</Label>
-                  <Select
-                    value={formStatus}
-                    onValueChange={(v) => setFormStatus(v as 'delivered' | 'missed')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="delivered">Delivered</SelectItem>
-                      <SelectItem value="missed">Missed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Notes</Label>
-                  <Textarea
-                    placeholder="Optional notes…"
-                    value={formNotes}
-                    onChange={(e) => setFormNotes(e.target.value)}
-                    rows={2}
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={
-                    addDeliveryRecord.isPending ||
-                    !formCustomerId ||
-                    !formDeliveryBoy ||
-                    !formQty
-                  }
-                >
-                  {addDeliveryRecord.isPending ? 'Saving…' : 'Log Delivery'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Stats */}
-        <div className={`${isAuthenticated ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-4`}>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: 'Delivered', value: totalDelivered, color: 'text-farm-green' },
-              { label: 'Missed', value: totalMissed, color: 'text-destructive' },
-              { label: 'Total Liters', value: `${totalLiters.toFixed(1)}L`, color: 'text-primary' },
-            ].map(({ label, value, color }) => (
-              <Card key={label}>
-                <CardContent className="p-4 text-center">
-                  <p className={`text-2xl font-bold ${color}`}>{value}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{label}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Monthly Chart */}
-          <DeliveryQuantityChart deliveryRecords={monthDeliveries} />
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold font-display text-foreground">Delivery Reports</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Track and manage milk delivery records
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Log Delivery
+          </Button>
         </div>
       </div>
 
-      {/* Filter + Table */}
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Truck className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total This Month</p>
+                <p className="text-xl font-bold">{monthDeliveries.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-farm-green/10">
+                <CheckCircle2 className="w-5 h-5 text-farm-green" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Delivered</p>
+                <p className="text-xl font-bold text-farm-green">{totalDelivered}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-destructive/10">
+                <XCircle className="w-5 h-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Missed</p>
+                <p className="text-xl font-bold text-destructive">{totalMissed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-farm-sky/10">
+                <Calendar className="w-5 h-5 text-farm-sky" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Quantity</p>
+                <p className="text-xl font-bold">{totalQuantity.toFixed(1)}L</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Chart */}
+      <DeliveryQuantityChart deliveryRecords={monthDeliveries} />
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <Select
+          value={filterMonth.toString()}
+          onValueChange={(v) => setFilterMonth(parseInt(v))}
+        >
+          <SelectTrigger className="w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((m, i) => (
+              <SelectItem key={i + 1} value={(i + 1).toString()}>
+                {m}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filterYear.toString()}
+          onValueChange={(v) => setFilterYear(parseInt(v))}
+        >
+          <SelectTrigger className="w-28">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((y) => (
+              <SelectItem key={y} value={y.toString()}>
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search deliveries…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      {/* Delivery Table */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Truck className="w-4 h-4 text-primary" />
-              Delivery Records
-            </CardTitle>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              <Input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="w-36 h-8 text-sm"
-              />
-              <span className="text-muted-foreground text-sm">range:</span>
-              <Input
-                type="date"
-                value={filterStart}
-                onChange={(e) => setFilterStart(e.target.value)}
-                className="w-36 h-8 text-sm"
-                placeholder="From"
-              />
-              <span className="text-muted-foreground text-sm">to</span>
-              <Input
-                type="date"
-                value={filterEnd}
-                onChange={(e) => setFilterEnd(e.target.value)}
-                className="w-36 h-8 text-sm"
-                placeholder="To"
-              />
-              {(filterStart || filterEnd) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearFilters}
-                  className="h-8 text-muted-foreground hover:text-foreground gap-1"
-                >
-                  <X className="w-3 h-3" />
-                  Clear
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadCSV}
-                disabled={filteredDeliveries.length === 0}
-                className="flex items-center gap-1.5 h-8"
-              >
-                <Download className="w-3.5 h-3.5" />
-                CSV
-              </Button>
-            </div>
-          </div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Truck className="w-4 h-4 text-primary" />
+            Delivery Records — {months[filterMonth - 1]} {filterYear}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? (
-            <div className="text-center py-10 text-muted-foreground">Loading records…</div>
-          ) : filteredDeliveries.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">
-              No delivery records found for the selected date.
+          {filteredMonthDeliveries.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              No delivery records found for this period.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -339,53 +304,44 @@ export default function DeliveryReports() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Delivery Boy</TableHead>
-                    <TableHead>Qty (L)</TableHead>
+                    <TableHead>Delivery By</TableHead>
+                    <TableHead>Quantity</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Notes</TableHead>
-                    <TableHead>WhatsApp</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredDeliveries.map((d) => (
+                  {filteredMonthDeliveries.map((d: DeliveryRecord) => (
                     <TableRow key={d.id.toString()}>
-                      <TableCell className="text-sm">
-                        {nanosecondsToDate(d.date).toLocaleDateString()}
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {nanosecondsToDate(d.date).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </TableCell>
-                      <TableCell className="font-medium">{getCustomerName(d.customerId)}</TableCell>
+                      <TableCell className="font-medium text-sm font-mono">
+                        {d.customerPrincipal
+                          ? d.customerPrincipal.toString().slice(0, 12) + '…'
+                          : 'Unknown'}
+                      </TableCell>
                       <TableCell className="text-sm">{d.deliveryBoyName}</TableCell>
-                      <TableCell className="text-sm">{d.quantityLiters.toFixed(1)}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            d.status === Variant_missed_delivered.delivered
-                              ? 'default'
-                              : 'destructive'
-                          }
-                        >
-                          {d.status === Variant_missed_delivered.delivered ? 'Delivered' : 'Missed'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {d.notes || '—'}
+                      <TableCell className="text-sm font-medium">
+                        {d.quantityLiters.toFixed(1)}L
                       </TableCell>
                       <TableCell>
-                        {d.status === Variant_missed_delivered.delivered && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-farm-green hover:text-farm-green hover:bg-farm-green/10"
-                            onClick={() => {
-                              const customer = getCustomer(d.customerId);
-                              if (customer) {
-                                setWhatsAppModalData({ customer, delivery: d });
-                                setWhatsAppModalOpen(true);
-                              }
-                            }}
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </Button>
+                        {d.status === Variant_missed_delivered.delivered ? (
+                          <Badge className="bg-farm-green/20 text-farm-green border-farm-green/30 text-xs">
+                            Delivered
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">
+                            Missed
+                          </Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">
+                        {d.notes || '—'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -396,11 +352,133 @@ export default function DeliveryReports() {
         </CardContent>
       </Card>
 
+      {/* Add Delivery Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Log Delivery Record</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddDelivery} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2 col-span-2">
+                <Label>Customer (for reference)</Label>
+                <Select value={formCustomerId} onValueChange={setFormCustomerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select customer (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((c: Customer) => (
+                      <SelectItem key={c.id.toString()} value={c.id.toString()}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="customer-principal">
+                  Customer Principal ID <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="customer-principal"
+                  placeholder="e.g. aaaaa-aa or xxxxx-xxxxx-xxxxx-xxxxx-cai"
+                  value={formCustomerPrincipal}
+                  onChange={(e) => setFormCustomerPrincipal(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  The Internet Identity principal of the customer. Customers can find this in their
+                  portal profile.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="delivery-boy">Delivery Person</Label>
+                <Input
+                  id="delivery-boy"
+                  placeholder="Name"
+                  value={formDeliveryBoy}
+                  onChange={(e) => setFormDeliveryBoy(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="delivery-date">Date</Label>
+                <Input
+                  id="delivery-date"
+                  type="date"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity (Litres)</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="0.0"
+                  value={formQuantity}
+                  onChange={(e) => setFormQuantity(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={formStatus}
+                  onValueChange={(v) => setFormStatus(v as Variant_missed_delivered)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={Variant_missed_delivered.delivered}>Delivered</SelectItem>
+                    <SelectItem value={Variant_missed_delivered.missed}>Missed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Input
+                  id="notes"
+                  placeholder="Optional notes"
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAddOpen(false)}
+                disabled={addDelivery.isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={addDelivery.isPending}>
+                {addDelivery.isPending ? 'Saving…' : 'Save Record'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* WhatsApp Modal — uses existing Customer + DeliveryRecord props */}
       <WhatsAppMessageModal
-        open={whatsAppModalOpen}
-        onOpenChange={setWhatsAppModalOpen}
-        customer={whatsAppModalData?.customer ?? null}
-        delivery={whatsAppModalData?.delivery ?? null}
+        open={whatsappOpen}
+        onOpenChange={setWhatsappOpen}
+        customer={whatsappCustomer}
+        delivery={whatsappDelivery}
       />
     </div>
   );

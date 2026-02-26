@@ -1,11 +1,14 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the Motoko compilation error in `backend/main.mo` that is blocking deployment to the Internet Computer network, and ensure the Add Customer / Add Cattle form-submission bug fixes remain intact.
+**Goal:** Add a customer-facing portal with Internet Identity login, product catalog, personal delivery history, and a feedback system, along with admin tools to view and resolve flagged customer feedback.
 
 **Planned changes:**
-- Identify and resolve the type errors, missing imports, or syntax issues in `backend/main.mo` so it compiles cleanly
-- Preserve all existing CRUD operations for cattle, customers, deliveries, and milk production with no breaking changes to the actor interface
-- Confirm that Add Customer and Add Cattle form submissions correctly call backend mutations and update the UI without a full page reload, with no double-submission
+- Extend backend delivery records with a `customerId` field (linked to Internet Identity principal) and add a query function returning only the calling customer's deliveries
+- Add a customer feedback system to the backend: `submitFeedback(deliveryId, message)` callable by authenticated customers, storing feedback with `flagged=true` and a timestamp
+- Add `getFlaggedFeedback()` accessible only by the admin principal
+- Add `resolveFeedback(feedbackId, newDeliveryStatus)` callable only by admin, which updates the delivery status and marks feedback as resolved
+- Create a `/customer` route in the React app requiring Internet Identity login, showing a product catalog, personal delivery history with status labels, and a "Report Issue" feedback form on delivered items
+- Add a "Flagged Feedback" section to the existing admin panel displaying all flagged feedback with delivery details, customer message, timestamp, and a resolve action
 
-**User-visible outcome:** The canister deploys successfully to the Internet Computer network, and users can add customers and cattle through the forms with the UI updating immediately after submission.
+**User-visible outcome:** Customers can log in via Internet Identity, browse the product catalog, view their own delivery history, and report issues on delivered items. Admins can view all flagged feedback and resolve it by updating the corresponding delivery status.

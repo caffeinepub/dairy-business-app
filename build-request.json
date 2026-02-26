@@ -1,53 +1,108 @@
 {
   "kind": "build_request",
-  "title": "Fix compilation error causing production deployment failure",
-  "priority": "high",
+  "title": "Add customer portal with Internet Identity login, product catalog, delivery tracking, and feedback system",
+  "projectName": "AO Farms Delivery Tracker",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Identify and fix the Motoko compilation error in backend/main.mo that is preventing successful deployment to the Internet Computer network. Ensure the actor compiles cleanly with no type errors, missing imports, or syntax issues.",
+      "text": "Extend the backend actor to support customer-linked delivery records. Add a 'customerId' field (linked to Internet Identity principal) to existing delivery records so customers can query only their own deliveries.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-recent"
-        ],
-        "quotes": [
-          "The deployment error for Version 24 means the build failed when trying to go live on the Internet Computer network. This can happen due to a compilation error in the generated code."
+          "msg-4",
+          "msg-8"
         ]
       },
       "acceptanceCriteria": [
-        "backend/main.mo compiles without errors",
-        "All existing CRUD operations for cattle, customers, deliveries, and milk production remain functional",
-        "The canister deploys successfully to the Internet Computer network"
+        "A delivery record can store a customer principal ID",
+        "A query function returns only deliveries belonging to the calling customer principal",
+        "Existing admin delivery functions remain unchanged"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Verify that the Add Customer and Add Cattle form submission bug fixes (which call backend mutations and update the UI without a page reload) are preserved and working correctly after the compilation fix.",
-      "target": "both",
+      "text": "Add a customer feedback system to the backend. Allow a customer to submit feedback on a delivery that is marked 'delivered' but was not received. Store feedback with fields: deliveryId, customerPrincipal, message, timestamp, and a 'flagged' boolean. Only customers can submit feedback; only admins can read all flagged feedback.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-recent"
-        ],
-        "quotes": [
-          "the fix for adding customers and cattle should now be working"
+          "msg-4",
+          "msg-8"
         ]
       },
       "acceptanceCriteria": [
-        "Submitting the Add Customer form successfully calls the backend mutation and updates the customer list without a full page reload",
-        "Submitting the Add Cattle form successfully calls the backend mutation and updates the cattle list without a full page reload",
-        "No double-submission occurs due to the existing ref-based guard in CattleForm and CustomerForm"
+        "submitFeedback(deliveryId, message) callable by authenticated customer principal",
+        "Feedback is stored with flagged=true and timestamp",
+        "getFlaggedFeedback() returns all flagged feedback, accessible only to admin principal",
+        "Customers cannot update delivery status directly"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Add an admin function to resolve flagged feedback by updating the delivery status and marking the feedback as resolved. Only the admin principal can call this function.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-4",
+          "msg-8"
+        ]
+      },
+      "acceptanceCriteria": [
+        "resolveFeedback(feedbackId, newDeliveryStatus) is callable only by admin",
+        "Delivery status is updated to the new value",
+        "Feedback record is marked resolved",
+        "Non-admin callers receive an error"
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Create a customer-facing portal as a separate route (/customer) in the React app. The portal must require Internet Identity login. Once logged in, customers see: (1) a full product catalog page, (2) their personal delivery history listing completed and missed deliveries, and (3) a feedback form on any delivery marked 'delivered'.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4",
+          "msg-8"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Unauthenticated users are redirected to a login screen with Internet Identity button",
+        "Authenticated customers can view the full product catalog",
+        "Customers see a list of their own deliveries with status labels (Completed, Missed, Delivered)",
+        "A 'Report Issue' button appears on deliveries with status 'delivered'",
+        "Submitting the feedback form sends feedback to the backend and shows a success message"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Add a 'Flagged Feedback' section to the existing admin panel (accessible only when logged in as admin). Display a list of all flagged customer feedback with delivery details, customer message, and a button to update the delivery status after investigation.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4",
+          "msg-8"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Admin can see all flagged feedback in a dedicated dashboard section",
+        "Each feedback entry shows delivery ID, customer info, feedback message, and timestamp",
+        "Admin can select a new status and resolve the feedback via a form/dialog",
+        "Resolved feedback is removed from the flagged list or marked resolved visually"
       ]
     }
   ],
   "constraints": [
-    "Do not change the frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or any files under frontend/src/components/ui",
-    "Preserve all existing backend data model types and CRUD API surface — no breaking changes to the actor interface"
+    "Only admins can update delivery statuses",
+    "Customers can submit feedback only — no direct status changes",
+    "Customer portal must use Internet Identity for authentication",
+    "All backend logic must remain in a single Motoko actor (backend/main.mo)",
+    "Do not modify files in frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui"
   ],
   "nonGoals": [
-    "Adding new features or pages",
-    "Changing the visual design or UI layout",
-    "Modifying inventory or delivery features"
+    "SMS or OTP-based customer login",
+    "Mobile number + password authentication",
+    "Customers editing or deleting delivery records",
+    "Real-time notifications or push alerts",
+    "Customer registration flow beyond Internet Identity"
   ],
   "imageRequirements": {
     "required": [],

@@ -1,18 +1,30 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "New project",
-  "architectural_notes": [],
-  "known_issues": [
-    "Deployment error when going live on Internet Computer network - compilation error in generated code"
+  "summary": "Delivery tracking app with customer portal (Internet Identity login, product catalog, delivery history, feedback on incorrect deliveries) and admin panel (delivery management, flagged feedback dashboard, status updates).",
+  "architectural_notes": [
+    "Only admins can update delivery statuses; customers can only submit feedback",
+    "Customer feedback on disputed deliveries creates a flag visible in the admin panel for investigation",
+    "Authentication via Internet Identity (passkeys, Google, Apple)"
   ],
-  "isFixRequest": true,
+  "known_issues": [
+    "Build has failed multiple times with AI/platform errors; may need to be simplified for successful deployment"
+  ],
+  "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-verify-that-the-add-customer-and-add-cattle-form-submission-bug-fixes-which-call-backend-mutations-and-update-the-ui-without-a-page-reload-are-preserved-and-working-correctly-after-the-compilation-fix",
-      "title": "Verify that the Add Customer and Add Cattle form submission bug fixes (which call backend mutations and update the UI without a page reload) are preserved and working correctly after the compilation fix.",
+      "id": "feature-create-a-customer-facing-portal-as-a-separate-route-customer-in-the-react-app-the-portal-must-require-internet-identity-login-once-logged-in-customers-see-1-a-full-product-catalog-page-2-their-personal-delivery-history-listing-completed-and-missed-deliveries-and-3-a-feedback-form-on-any-delivery-marked-delivered",
+      "title": "Create a customer-facing portal as a separate route (/customer) in the React app. The portal must require Internet Identity login. Once logged in, customers see: (1) a full product catalog page, (2) their personal delivery history listing completed and missed deliveries, and (3) a feedback form on any delivery marked 'delivered'.",
       "reqIds": [
-        "REQ-2"
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-flagged-feedback-section-to-the-existing-admin-panel-accessible-only-when-logged-in-as-admin-display-a-list-of-all-flagged-customer-feedback-with-delivery-details-customer-message-and-a-button-to-update-the-delivery-status-after-investigation",
+      "title": "Add a 'Flagged Feedback' section to the existing admin panel (accessible only when logged in as admin). Display a list of all flagged customer feedback with delivery details, customer message, and a button to update the delivery status after investigation.",
+      "reqIds": [
+        "REQ-5"
       ],
       "version": 1
     }
@@ -20,14 +32,43 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Identify and fix the Motoko compilation error in backend/main.mo that is preventing successful deployment to the Internet Computer network. Ensure the actor compiles cleanly with no type errors, missing imports, or syntax issues.",
+      "summary": "Customer portal with Internet Identity login, full product catalog view, personal delivery history (completed & missed), and feedback form for incorrectly marked deliveries",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Admin panel with delivery management, status updates, flagged feedback dashboard, and manual status correction after investigation",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Extend the backend actor to support customer-linked delivery records. Add a 'customerId' field (linked to Internet Identity principal) to existing delivery records so customers can query only their own deliveries.",
       "reqIds": [
         "REQ-1"
       ],
       "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Add a customer feedback system to the backend. Allow a customer to submit feedback on a delivery that is marked 'delivered' but was not received. Store feedback with fields: deliveryId, customerPrincipal, message, timestamp, and a 'flagged' boolean. Only customers can submit feedback; only admins can read all flagged feedback.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Add an admin function to resolve flagged feedback by updating the delivery status and marking the feedback as resolved. Only the admin principal can call this function.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
     }
   ],
-  "projectName": "Fix compilation error causing production deployment failure",
+  "gameProjectType": "none",
+  "projectName": "Delivery Tracking App",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

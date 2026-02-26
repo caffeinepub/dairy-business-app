@@ -18,6 +18,7 @@ import { useGetDeliveryRecordsByDate, useGetDeliveryRecordsByMonth, useGetCustom
 import { nanosecondsToDate, getTodayNanoseconds } from '../hooks/useQueries';
 import MilkProductionChart from '../components/MilkProductionChart';
 import CattleHealthChart from '../components/CattleHealthChart';
+import FlaggedFeedbackSection from '../components/FlaggedFeedbackSection';
 import type { MilkRecord } from '../backend';
 import { CattleStatus, Variant_missed_delivered } from '../backend';
 
@@ -122,15 +123,15 @@ export default function Dashboard() {
     }
 
     // Overdue delivery alert: active customers with no delivery today
-    const deliveredCustomerIds = new Set(
+    const deliveredCustomerPrincipals = new Set(
       todayDeliveries
         .filter((d) => d.status === Variant_missed_delivered.delivered)
-        .map((d) => d.customerId.toString()),
+        .map((d) => d.customerPrincipal?.toString() ?? ''),
     );
 
     const activeCustomerList = customers.filter((c) => c.active);
     for (const customer of activeCustomerList) {
-      if (!deliveredCustomerIds.has(customer.id.toString())) {
+      if (!deliveredCustomerPrincipals.has(customer.id.toString())) {
         result.push({
           id: `no-delivery-${customer.id.toString()}`,
           type: 'warning',
@@ -400,6 +401,15 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Customer Feedback Section (Admin) */}
+      <section>
+        <h2 className="text-lg font-semibold font-display mb-3 flex items-center gap-2">
+          <Bell className="w-5 h-5 text-destructive" />
+          Customer Feedback
+        </h2>
+        <FlaggedFeedbackSection />
+      </section>
     </div>
   );
 }

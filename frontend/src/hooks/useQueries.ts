@@ -8,8 +8,10 @@ import type {
   MilkRecord,
   HealthStatus,
   UserProfile,
+  CustomerFeedback,
 } from '../backend';
 import { CattleStatus, Variant_missed_delivered } from '../backend';
+import type { Principal } from '@icp-sdk/core/principal';
 
 // ─── Time Utilities ───────────────────────────────────────────────────────────
 
@@ -218,16 +220,16 @@ export function useGetDeliveryRecordsByDate(date: Date | null) {
   });
 }
 
-export function useGetDeliveryRecordsByCustomer(customerId: bigint | null) {
+export function useGetDeliveryRecordsByCustomer(customerPrincipal: Principal | null) {
   const { actor, isFetching } = useActor();
 
   return useQuery<DeliveryRecord[]>({
-    queryKey: ['deliveryRecords', 'byCustomer', customerId?.toString()],
+    queryKey: ['deliveryRecords', 'byCustomer', customerPrincipal?.toString()],
     queryFn: async () => {
-      if (!actor || customerId === null) return [];
-      return actor.getDeliveryRecordsByCustomer(customerId);
+      if (!actor || customerPrincipal === null) return [];
+      return actor.getDeliveryRecordsByCustomer(customerPrincipal);
     },
-    enabled: !!actor && !isFetching && customerId !== null,
+    enabled: !!actor && !isFetching && customerPrincipal !== null,
   });
 }
 
@@ -250,7 +252,7 @@ export function useAddDeliveryRecord() {
 
   return useMutation({
     mutationFn: async (data: {
-      customerId: bigint;
+      customerPrincipal: Principal;
       deliveryBoyName: string;
       date: bigint;
       quantityLiters: number;
@@ -259,7 +261,7 @@ export function useAddDeliveryRecord() {
     }) => {
       if (!actor) throw new Error('Actor not available');
       return actor.addDeliveryRecord(
-        data.customerId,
+        data.customerPrincipal,
         data.deliveryBoyName,
         data.date,
         data.quantityLiters,
@@ -380,6 +382,71 @@ export function useAddMilkRecord() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['milkRecords'] });
+    },
+  });
+}
+
+// ─── Customer Portal: My Deliveries ──────────────────────────────────────────
+
+export function useGetMyDeliveries() {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<DeliveryRecord[]>({
+    queryKey: ['myDeliveries'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getMyDeliveries();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+// ─── Customer Portal: Submit Feedback ────────────────────────────────────────
+
+export function useSubmitFeedback() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { deliveryId: bigint; message: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.submitFeedback(data.deliveryId, data.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myDeliveries'] });
+    },
+  });
+}
+
+// ─── Admin: Flagged Feedback ──────────────────────────────────────────────────
+
+export function useGetFlaggedFeedback() {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<CustomerFeedback[]>({
+    queryKey: ['flaggedFeedback'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getFlaggedFeedback();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+// ─── Admin: Resolve Feedback ──────────────────────────────────────────────────
+
+export function useResolveFeedback() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (feedbackId: bigint) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.resolveFeedback(feedbackId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['flaggedFeedback'] });
+      queryClient.invalidateQueries({ queryKey: ['deliveryRecords'] });
     },
   });
 }

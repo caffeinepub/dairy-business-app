@@ -11,13 +11,14 @@ import {
   Menu,
   X,
   Heart,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const navLinks = [
+const adminNavLinks = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/cattle', label: 'Cattle', icon: Beef },
   { to: '/milk', label: 'Milk', icon: Droplets },
@@ -26,6 +27,8 @@ const navLinks = [
   { to: '/deliveries', label: 'Deliveries', icon: Truck },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
 ];
+
+const portalLink = { to: '/portal', label: 'Customer Portal', icon: ShoppingBag };
 
 export default function Layout({ children }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -36,6 +39,8 @@ export default function Layout({ children }: LayoutProps) {
     if (to === '/') return currentPath === '/';
     return currentPath.startsWith(to);
   };
+
+  const allNavLinks = [...adminNavLinks, portalLink];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -54,7 +59,7 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-1">
-              {navLinks.map(({ to, label, icon: Icon }) => (
+              {adminNavLinks.map(({ to, label, icon: Icon }) => (
                 <Link
                   key={to}
                   to={to}
@@ -68,6 +73,18 @@ export default function Layout({ children }: LayoutProps) {
                   {label}
                 </Link>
               ))}
+              {/* Customer Portal link with distinct styling */}
+              <Link
+                to={portalLink.to}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ml-1 border ${
+                  isActive(portalLink.to)
+                    ? 'bg-accent text-accent-foreground border-accent'
+                    : 'text-accent-foreground border-accent/40 hover:bg-accent/10'
+                }`}
+              >
+                <portalLink.icon className="w-4 h-4" />
+                {portalLink.label}
+              </Link>
             </nav>
 
             {/* Mobile hamburger */}
@@ -84,7 +101,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Mobile Nav */}
         {mobileOpen && (
           <div className="md:hidden border-t border-border bg-card px-4 py-3 space-y-1">
-            {navLinks.map(({ to, label, icon: Icon }) => (
+            {allNavLinks.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
                 to={to}

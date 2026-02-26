@@ -1,41 +1,95 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix compilation error causing production deployment failure",
+  "title": "Add customer portal with Internet Identity login, product catalog, delivery tracking, and feedback system",
   "requirements": [
     {
-      "id": "REQ-2",
-      "summary": "Verify that the Add Customer and Add Cattle form submission bug fixes are preserved and working correctly after the compilation fix",
+      "id": "REQ-4",
+      "summary": "Create a customer-facing portal route with Internet Identity authentication, product catalog, delivery history, and feedback submission",
       "acceptanceCriteria": [
-        "Submitting the Add Customer form successfully calls the backend mutation and updates the customer list without a full page reload",
-        "Submitting the Add Cattle form successfully calls the backend mutation and updates the cattle list without a full page reload",
-        "No double-submission occurs due to the existing ref-based guard in CattleForm and CustomerForm"
+        "Unauthenticated users are redirected to a login screen with Internet Identity button",
+        "Authenticated customers can view the full product catalog",
+        "Customers see a list of their own deliveries with status labels (Completed, Missed, Delivered)",
+        "A 'Report Issue' button appears on deliveries with status 'delivered'",
+        "Submitting the feedback form sends feedback to the backend and shows a success message"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/CattleForm.tsx",
-          "operation": "modify",
-          "description": "Review and verify the ref-based double-submission guard is correctly implemented and working. Ensure the form submission calls the backend mutation via useAddCattle or useUpdateCattle and that the mutation invalidates the cattle query cache to trigger UI updates without a page reload."
+          "path": "frontend/src/pages/CustomerPortal.tsx",
+          "operation": "create",
+          "description": "Create the main customer portal page component at route /customer. Use the authorization component to require Internet Identity login and enforce #user role. Display a login prompt with Internet Identity button for unauthenticated users. Once authenticated, show a tabbed interface with three sections: (1) Product Catalog showing all available products, (2) My Deliveries listing the customer's own delivery records filtered by getMyDeliveries() with status badges, and (3) a feedback form accessible from deliveries marked 'delivered'. Verify the authorization component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/components/CustomerForm.tsx",
-          "operation": "modify",
-          "description": "Review and verify the ref-based double-submission guard is correctly implemented and working. Ensure the form submission calls the backend mutation via useAddCustomer or useUpdateCustomer and that the mutation invalidates the customer query cache to trigger UI updates without a page reload."
+          "path": "frontend/src/components/ProductCatalog.tsx",
+          "operation": "create",
+          "description": "Create a product catalog component that displays the farm's milk products and offerings. Show product cards with descriptions, quantities, and pricing information. Use a grid layout with shadcn/ui Card components for visual consistency. This is a read-only display for customers to browse available products."
+        },
+        {
+          "path": "frontend/src/components/CustomerDeliveryList.tsx",
+          "operation": "create",
+          "description": "Create a delivery list component that fetches and displays the authenticated customer's personal delivery history using getMyDeliveries() from the backend interface. Show each delivery with date, quantity, delivery boy name, status (using Badge components with color coding: green for 'delivered', red for 'missed'), and notes. Include a 'Report Issue' button only on deliveries with status 'delivered' that opens the feedback dialog. Use shadcn/ui Table component for the list layout."
+        },
+        {
+          "path": "frontend/src/components/CustomerFeedbackDialog.tsx",
+          "operation": "create",
+          "description": "Create a dialog component for submitting customer feedback on a delivered order. Accept deliveryId as a prop. Display the delivery details (date, quantity) and provide a textarea for the customer to describe the issue (e.g., order not received). On submit, call submitFeedback(deliveryId, message) from the backend interface. Show a success toast message after submission and close the dialog. Use shadcn/ui Dialog, Textarea, and Button components."
         },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Verify that useAddCattle and useAddCustomer mutations correctly invalidate their respective query keys ('cattle' and 'customers') on success to ensure the UI updates automatically after form submission without requiring a page reload."
+          "description": "Add React Query hooks for customer portal backend capabilities: useGetMyDeliveries() to fetch the authenticated customer's delivery records, useSubmitFeedback() mutation to submit feedback, and useGetFlaggedFeedback() to fetch all flagged feedback for admin use. Each hook should use the useActor hook to get the authenticated actor and handle loading/error states appropriately."
         },
         {
-          "path": "frontend/src/pages/CattleManagement.tsx",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Verify that the CattleForm component is correctly wired to useAddCattle and useUpdateCattle mutations, and that successful submissions close the dialog and refresh the cattle list via query invalidation."
+          "description": "Register the new /customer route in the TanStack Router configuration. Import and wire the CustomerPortal page component. Ensure the route is accessible in the router tree so authenticated customers can navigate to it."
         },
         {
-          "path": "frontend/src/pages/CustomerManagement.tsx",
+          "path": "frontend/src/components/Layout.tsx",
           "operation": "modify",
-          "description": "Verify that the CustomerForm component is correctly wired to useAddCustomer and useUpdateCustomer mutations, and that successful submissions close the dialog and refresh the customer list via query invalidation."
+          "description": "Add a 'Customer Portal' navigation link in the header navigation that points to /customer route. Place it after the existing admin-focused links. The link should be visible to all users (authenticated and unauthenticated) so customers can discover the portal entry point."
+        },
+        {
+          "path": "frontend/src/components/ProfileSetupModal.tsx",
+          "operation": "create",
+          "description": "Create a modal component for first-time user profile setup following the authorization component's profile setup pattern. Display when isAuthenticated && !profileLoading && isFetched && userProfile === null. Prompt the user to enter their name, then call saveCallerUserProfile({ name }) from the backend interface. Use the custom useGetCallerUserProfile hook implementation pattern from the authorization component usage instructions to prevent modal flash. Use shadcn/ui Dialog, Input, and Button components."
+        },
+        {
+          "path": "frontend/src/pages/CustomerPortal.tsx",
+          "operation": "modify",
+          "description": "Integrate the ProfileSetupModal component into the CustomerPortal page. Show the modal when a newly authenticated user has no profile yet. After profile setup completes, proceed to show the main portal content (catalog, deliveries, feedback). Follow the authorization component's recommended pattern for preventing profile setup modal flash."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Add a Flagged Feedback section to the admin panel for reviewing and resolving customer feedback",
+      "acceptanceCriteria": [
+        "Admin can see all flagged feedback in a dedicated dashboard section",
+        "Each feedback entry shows delivery ID, customer info, feedback message, and timestamp",
+        "Admin can select a new status and resolve the feedback via a form/dialog",
+        "Resolved feedback is removed from the flagged list or marked resolved visually"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/FlaggedFeedbackSection.tsx",
+          "operation": "create",
+          "description": "Create a section component that displays all flagged customer feedback for admin review. Use the authorization component's isCallerAdmin() guard to restrict access to admin users only. Fetch flagged feedback using getFlaggedFeedback() from the backend interface. Display each feedback entry in a shadcn/ui Card or Table row showing deliveryId, customerPrincipal (convert to string for display), message text, timestamp (formatted as readable date), and a 'Resolve' button. When resolve is clicked, open a dialog to confirm resolution. Verify the authorization component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/ResolveFeedbackDialog.tsx",
+          "operation": "create",
+          "description": "Create a dialog component for resolving flagged customer feedback. Accept feedbackId and delivery details as props. Display the feedback details (delivery ID, customer message, timestamp) for context. Provide a confirmation button that calls resolveFeedback(feedbackId) from the backend interface. On success, show a success toast message, invalidate the flagged feedback query to refresh the list, and close the dialog. Use shadcn/ui Dialog, Button, and Alert components."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "Add the FlaggedFeedbackSection component to the admin dashboard page. Position it below the existing charts and alerts, in a new section titled 'Customer Feedback'. The section should only render when the current user is an admin (use isCallerAdmin check from the authorization component). This provides admins with quick access to customer issues from the main dashboard."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add useResolveFeedback() mutation hook that calls resolveFeedback(feedbackId) from the backend interface. After successful mutation, invalidate the 'flaggedFeedback' query key to refresh the admin's feedback list. Handle authorization errors gracefully and show appropriate error toasts."
         }
       ]
     }

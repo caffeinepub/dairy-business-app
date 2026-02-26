@@ -30,15 +30,24 @@ export interface Customer {
   'address' : string,
   'phone' : string,
 }
+export interface CustomerFeedback {
+  'resolved' : boolean,
+  'deliveryId' : bigint,
+  'customerPrincipal' : Principal,
+  'message' : string,
+  'timestamp' : Time,
+  'flagged' : boolean,
+  'feedbackId' : bigint,
+}
 export interface DeliveryRecord {
   'id' : bigint,
   'status' : { 'missed' : null } |
     { 'delivered' : null },
+  'customerPrincipal' : [] | [Principal],
   'date' : Time,
   'quantityLiters' : number,
   'deliveryBoyName' : string,
   'notes' : string,
-  'customerId' : bigint,
 }
 export type HealthStatus = { 'recovered' : null } |
   {
@@ -76,7 +85,7 @@ export interface _SERVICE {
   'addCustomer' : ActorMethod<[string, string, string, boolean], [] | [bigint]>,
   'addDeliveryRecord' : ActorMethod<
     [
-      bigint,
+      Principal,
       string,
       Time,
       number,
@@ -106,12 +115,16 @@ export interface _SERVICE {
   'getCattleByPurchaseDateRange' : ActorMethod<[Time, Time], Array<Cattle>>,
   'getCattleByStatus' : ActorMethod<[CattleStatus], Array<Cattle>>,
   'getCustomers' : ActorMethod<[], Array<Customer>>,
-  'getDeliveryRecordsByCustomer' : ActorMethod<[bigint], Array<DeliveryRecord>>,
+  'getDeliveryRecordsByCustomer' : ActorMethod<
+    [Principal],
+    Array<DeliveryRecord>
+  >,
   'getDeliveryRecordsByDate' : ActorMethod<[Time], Array<DeliveryRecord>>,
   'getDeliveryRecordsByMonth' : ActorMethod<
     [bigint, bigint],
     Array<DeliveryRecord>
   >,
+  'getFlaggedFeedback' : ActorMethod<[], Array<CustomerFeedback>>,
   'getMilkProductionRecords' : ActorMethod<[], Array<MilkProductionRecord>>,
   'getMilkRecordsByCattle' : ActorMethod<[bigint], Array<MilkRecord>>,
   'getMilkRecordsByDateRange' : ActorMethod<[Time, Time], Array<MilkRecord>>,
@@ -119,9 +132,12 @@ export interface _SERVICE {
     [bigint, bigint],
     Array<MilkProductionRecord>
   >,
+  'getMyDeliveries' : ActorMethod<[], Array<DeliveryRecord>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'resolveFeedback' : ActorMethod<[bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'submitFeedback' : ActorMethod<[bigint, string], undefined>,
   'updateCattle' : ActorMethod<
     [
       bigint,

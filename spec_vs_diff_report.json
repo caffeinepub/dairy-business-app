@@ -1,38 +1,72 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T16:29:28.939Z",
-  "summary": "The diff shows frontend component fixes (CattleForm, CustomerForm, CattleManagement, CustomerManagement, useQueries, etc.) with ref-based submission guards and proper mutation handling. However, the primary requirement — fixing the Motoko compilation error in backend/main.mo — is entirely absent from the diff. No backend files were modified.",
+  "generatedAt": "2026-02-26T03:48:55.991Z",
+  "summary": "The diff implements most of the requested requirements: backend extended with customerPrincipal on delivery records, feedback system (submitFeedback, getFlaggedFeedback), resolveFeedback admin function, customer portal at /portal route with II login, product catalog, delivery history, feedback form, and FlaggedFeedbackSection in admin dashboard. However, the route is /portal instead of the required /customer. The ResolveFeedbackDialog does not expose a 'select new delivery status' option — it simply marks feedback resolved without allowing admin to pick a newDeliveryStatus. REQ-3 AC specifically requires the delivery status to be updated to a new value chosen by the admin.",
   "missing_requirements": [
     {
-      "id": "REQ-1",
-      "requirement": "Identify and fix the Motoko compilation error in backend/main.mo that is preventing successful deployment to the Internet Computer network.",
-      "reason": "The diff contains no changes to backend/main.mo or any backend files. The compilation error fix is the primary goal of this build request, yet no backend file was added or modified.",
-      "evidence": []
+      "id": "REQ-4",
+      "requirement": "Customer portal must be accessible at the /customer route",
+      "reason": "The route is registered as /portal in App.tsx, not /customer as specified in the requirement.",
+      "evidence": [
+        "frontend/src/App.tsx"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "requirement": "resolveFeedback(feedbackId, newDeliveryStatus) must allow admin to specify a new delivery status, and the delivery status must be updated to that value",
+      "reason": "The ResolveFeedbackDialog does not present a status selection field; it calls resolveFeedback with only feedbackId. The frontend mutation only passes feedbackId, suggesting the backend function may not accept or apply a newDeliveryStatus parameter as required.",
+      "evidence": [
+        "frontend/src/components/ResolveFeedbackDialog.tsx",
+        "frontend/src/hooks/useQueries.ts"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "requirement": "Admin can select a new status and resolve the feedback via a form/dialog",
+      "reason": "ResolveFeedbackDialog has no status selector input — the admin cannot choose a new delivery status before resolving, contradicting the AC that requires selecting a new status.",
+      "evidence": [
+        "frontend/src/components/ResolveFeedbackDialog.tsx"
+      ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Changes to MilkProductionChart.tsx, DeliveryReports.tsx, frontend-file-summaries.txt, and project_state.json were included in the diff but are not required by REQ-1 or REQ-2.",
-      "reason": "These files are not mentioned in REQ-1 or REQ-2 as needing changes. Modifying DeliveryReports.tsx and MilkProductionChart.tsx goes beyond the stated requirements of fixing the backend compilation error and preserving existing form submission behavior.",
+      "description": "ProfileSetupModal for new customer name entry on first login",
+      "reason": "The build request non-goals explicitly exclude any customer registration flow beyond Internet Identity. A profile setup modal prompting for a name is an additional registration step not requested.",
       "evidence": [
-        "frontend/src/components/MilkProductionChart.tsx",
-        "frontend/src/pages/DeliveryReports.tsx",
-        "frontend-file-summaries.txt",
-        "project_state.json"
+        "frontend/src/components/ProfileSetupModal.tsx",
+        "frontend/src/pages/CustomerPortal.tsx"
+      ]
+    },
+    {
+      "description": "backend/migration.mo module providing explicit data migration logic from legacy delivery records",
+      "reason": "No migration module was requested in the build request. The requirements only asked to add a customerPrincipal field to delivery records, not to provide a formal migration module.",
+      "evidence": [
+        "backend/migration.mo"
       ]
     }
   ],
-  "confidence": 0.92,
+  "confidence": 0.82,
   "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/CattleForm.tsx",
-    "frontend/src/components/CustomerForm.tsx",
-    "frontend/src/components/MilkProductionChart.tsx",
+    "frontend/src/App.tsx",
+    "frontend/src/components/CustomerDeliveryList.tsx",
+    "frontend/src/components/CustomerFeedbackDialog.tsx",
+    "frontend/src/components/FlaggedFeedbackSection.tsx",
+    "frontend/src/components/Layout.tsx",
+    "frontend/src/components/ProductCatalog.tsx",
+    "frontend/src/components/ProfileSetupModal.tsx",
+    "frontend/src/components/ResolveFeedbackDialog.tsx",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/CattleManagement.tsx",
-    "frontend/src/pages/CustomerManagement.tsx",
+    "frontend/src/pages/CustomerPortal.tsx",
+    "frontend/src/pages/Dashboard.tsx",
     "frontend/src/pages/DeliveryReports.tsx",
+    "frontend/src/pages/MilkProduction.tsx",
+    "frontend/src/pages/MonthlyReports.tsx",
+    "frontend/src/utils/csvExport.ts",
     "project_state.json"
   ]
 }

@@ -1,55 +1,110 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-25T16:29:28.941Z",
+  "generatedAt": "2026-02-26T03:48:55.995Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 1,
+    "total": 5,
+    "implemented": 2,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Identify and fix the Motoko compilation error in backend/main.mo that is preventing successful deployment to the Internet Computer network. Ensure the actor compiles cleanly with no type errors, missing imports, or syntax issues.",
+        "summary": "Extend the backend actor to support customer-linked delivery records. Add a 'customerId' field (linked to Internet Identity principal) to existing delivery records so customers can query only their own deliveries.",
         "status": "unknown",
         "plannedFiles": [],
         "matchedFiles": []
       },
       {
         "id": "REQ-2",
-        "summary": "Verify that the Add Customer and Add Cattle form submission bug fixes (which call backend mutations and update the UI without a page reload) are preserved and working correctly after the compilation fix.",
+        "summary": "Add a customer feedback system to the backend. Allow a customer to submit feedback on a delivery that is marked 'delivered' but was not received. Store feedback with fields: deliveryId, customerPrincipal, message, timestamp, and a 'flagged' boolean. Only customers can submit feedback; only admins can read all flagged feedback.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Add an admin function to resolve flagged feedback by updating the delivery status and marking the feedback as resolved. Only the admin principal can call this function.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Create a customer-facing portal as a separate route (/customer) in the React app. The portal must require Internet Identity login. Once logged in, customers see: (1) a full product catalog page, (2) their personal delivery history listing completed and missed deliveries, and (3) a feedback form on any delivery marked 'delivered'.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/CattleForm.tsx",
-          "frontend/src/components/CustomerForm.tsx",
+          "frontend/src/pages/CustomerPortal.tsx",
+          "frontend/src/components/ProductCatalog.tsx",
+          "frontend/src/components/CustomerDeliveryList.tsx",
+          "frontend/src/components/CustomerFeedbackDialog.tsx",
           "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/CattleManagement.tsx",
-          "frontend/src/pages/CustomerManagement.tsx"
+          "frontend/src/App.tsx",
+          "frontend/src/components/Layout.tsx",
+          "frontend/src/components/ProfileSetupModal.tsx",
+          "frontend/src/pages/CustomerPortal.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/CattleForm.tsx",
-          "frontend/src/components/CustomerForm.tsx",
+          "frontend/src/pages/CustomerPortal.tsx",
+          "frontend/src/components/ProductCatalog.tsx",
+          "frontend/src/components/CustomerDeliveryList.tsx",
+          "frontend/src/components/CustomerFeedbackDialog.tsx",
           "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/CattleManagement.tsx",
-          "frontend/src/pages/CustomerManagement.tsx"
+          "frontend/src/App.tsx",
+          "frontend/src/components/Layout.tsx",
+          "frontend/src/components/ProfileSetupModal.tsx",
+          "frontend/src/pages/CustomerPortal.tsx"
+        ]
+      },
+      {
+        "id": "REQ-5",
+        "summary": "Add a 'Flagged Feedback' section to the existing admin panel (accessible only when logged in as admin). Display a list of all flagged customer feedback with delivery details, customer message, and a button to update the delivery status after investigation.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/FlaggedFeedbackSection.tsx",
+          "frontend/src/components/ResolveFeedbackDialog.tsx",
+          "frontend/src/pages/Dashboard.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/FlaggedFeedbackSection.tsx",
+          "frontend/src/components/ResolveFeedbackDialog.tsx",
+          "frontend/src/pages/Dashboard.tsx",
+          "frontend/src/hooks/useQueries.ts"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
+    "build-template/README.md",
+    "caffeine.lock.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/CattleForm.tsx",
-    "frontend/src/components/CustomerForm.tsx",
-    "frontend/src/components/MilkProductionChart.tsx",
+    "frontend/src/App.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/CustomerDeliveryList.tsx",
+    "frontend/src/components/CustomerFeedbackDialog.tsx",
+    "frontend/src/components/FlaggedFeedbackSection.tsx",
+    "frontend/src/components/Layout.tsx",
+    "frontend/src/components/ProductCatalog.tsx",
+    "frontend/src/components/ProfileSetupModal.tsx",
+    "frontend/src/components/ResolveFeedbackDialog.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/CattleManagement.tsx",
-    "frontend/src/pages/CustomerManagement.tsx",
+    "frontend/src/pages/CustomerPortal.tsx",
+    "frontend/src/pages/Dashboard.tsx",
     "frontend/src/pages/DeliveryReports.tsx",
+    "frontend/src/pages/MilkProduction.tsx",
+    "frontend/src/pages/MonthlyReports.tsx",
+    "frontend/src/utils/csvExport.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

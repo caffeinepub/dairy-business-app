@@ -2,14 +2,17 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-verify-that-the-add-customer-and-add-cattle-form-submission-bug-fixes-which-call-backend-mutations-and-update-the-ui-without-a-page-reload-are-preserved-and-working-correctly-after-the-compilation-fix",
-      "featureTitle": "Verify that the Add Customer and Add Cattle form submission bug fixes (which call backend mutations and update the UI without a page reload) are preserved and working correctly after the compilation fix.",
+      "featureId": "feature-create-a-customer-facing-portal-as-a-separate-route-customer-in-the-react-app-the-portal-must-require-internet-identity-login-once-logged-in-customers-see-1-a-full-product-catalog-page-2-their-personal-delivery-history-listing-completed-and-missed-deliveries-and-3-a-feedback-form-on-any-delivery-marked-delivered",
+      "featureTitle": "Create a customer-facing portal as a separate route (/customer) in the React app. The portal must require Internet Identity login. Once logged in, customers see: (1) a full product catalog page, (2) their personal delivery history listing completed and missed deliveries, and (3) a feedback form on any delivery marked 'delivered'.",
       "files": [
-        "frontend/src/components/CattleForm.tsx",
-        "frontend/src/components/CustomerForm.tsx",
+        "frontend/src/App.tsx",
+        "frontend/src/components/CustomerDeliveryList.tsx",
+        "frontend/src/components/CustomerFeedbackDialog.tsx",
+        "frontend/src/components/Layout.tsx",
+        "frontend/src/components/ProductCatalog.tsx",
+        "frontend/src/components/ProfileSetupModal.tsx",
         "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/CattleManagement.tsx",
-        "frontend/src/pages/CustomerManagement.tsx"
+        "frontend/src/pages/CustomerPortal.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -20,7 +23,29 @@
         "authorization@4.0.0"
       ],
       "testIds": [
-        "REQ-2"
+        "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-flagged-feedback-section-to-the-existing-admin-panel-accessible-only-when-logged-in-as-admin-display-a-list-of-all-flagged-customer-feedback-with-delivery-details-customer-message-and-a-button-to-update-the-delivery-status-after-investigation",
+      "featureTitle": "Add a 'Flagged Feedback' section to the existing admin panel (accessible only when logged in as admin). Display a list of all flagged customer feedback with delivery details, customer message, and a button to update the delivery status after investigation.",
+      "files": [
+        "frontend/src/components/FlaggedFeedbackSection.tsx",
+        "frontend/src/components/ResolveFeedbackDialog.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/Dashboard.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
       ],
       "confidence": "high"
     }
