@@ -1,208 +1,186 @@
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { useGetCallerUserProfile } from '../hooks/useQueries';
-import ProfileSetupModal from '../components/ProfileSetupModal';
-import ProductCatalog from '../components/ProductCatalog';
-import CustomerDeliveryList from '../components/CustomerDeliveryList';
-import { LogIn, LogOut, Package, Truck, User, ShoppingBag } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useQuery } from '@tanstack/react-query';
+import { useActor } from '../hooks/useActor';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
+import { useCustomerLogin } from '../hooks/useCustomerQueries';
+import CustomerPlaceOrder from '../components/CustomerPlaceOrder';
+import CustomerMyDeliveries from '../components/CustomerMyDeliveries';
+import { type CattleOrder } from '../backend';
+import { Loader2, LogOut, User, ShoppingCart, Package } from 'lucide-react';
 
 export default function CustomerPortal() {
-  const { login, clear, loginStatus, identity, isInitializing } = useInternetIdentity();
-  const queryClient = useQueryClient();
+  const { session, isAuthenticated, login, logout } = useCustomerAuth();
+  const { actor, isFetching: actorFetching } = useActor();
+  const customerLogin = useCustomerLogin();
 
-  const isAuthenticated = !!identity;
-  const isLoggingIn = loginStatus === 'logging-in';
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
-  const {
-    data: userProfile,
-    isLoading: profileLoading,
-    isFetched: profileFetched,
-  } = useGetCallerUserProfile();
+  const { data: myOrders = [], isLoading: ordersLoading } = useQuery<CattleOrder[]>({
+    queryKey: ['customer', 'my-orders', session?.customerId?.toString()],
+    queryFn: async () => {
+      if (!actor || !session) return [];
+      // Since getMyOrders requires Internet Identity auth, we fetch all orders
+      // and filter by customerId from the session
+      const all = await actor.getAllOrders().catch(() => []);
+      return all.filter(o => o.customerId.toString() === session.customerId.toString());
+    },
+    enabled: !!actor && !actorFetching && isAuthenticated && !!session,
+  });
 
-  const showProfileSetup =
-    isAuthenticated && !profileLoading && profileFetched && userProfile === null;
-
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
     try {
-      await login();
-    } catch (error: unknown) {
-      const err = error as Error;
-      if (err?.message === 'User is already authenticated') {
-        await clear();
-        setTimeout(() => login(), 300);
-      }
+      const token = await customerLogin.mutateAsync({ username, password });
+      // Parse customerId from token: "session-{id}"
+      const idStr = token.replace('session-', '');
+      const customerId = BigInt(idStr);
+      login({
+        customerId,
+        username,
+        name: username,
+        sessionToken: token,
+      });
+    } catch (err: any) {
+      setLoginError(err.message || 'Login failed');
     }
   };
 
-  const handleLogout = async () => {
-    await clear();
-    queryClient.clear();
-  };
-
-  // Loading state while checking identity
-  if (isInitializing) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-40 w-full rounded-2xl" />
-        <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Not authenticated — show login screen
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-6 px-4">
-        {/* Hero */}
-        <div className="relative rounded-2xl overflow-hidden w-full max-w-2xl h-40">
-          <img
-            src="/assets/generated/farm-hero.dim_1200x300.png"
-            alt="AO Farms"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center px-6">
-            <div>
-              <h1 className="text-2xl font-bold text-white font-display">Customer Portal</h1>
-              <p className="text-white/80 text-sm mt-1">Track your deliveries & explore products</p>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-customer-bg to-green-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <img src="/assets/generated/ao-farms-logo.dim_320x160.png" alt="AO Farms" className="h-16 object-contain mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-admin-dark">Customer Portal</h1>
+            <p className="text-muted-foreground mt-2">Sign in to place orders and track deliveries</p>
           </div>
-        </div>
 
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center space-y-6">
-            <div className="flex justify-center">
-              <div className="p-4 rounded-full bg-primary/10">
-                <ShoppingBag className="w-10 h-10 text-primary" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold font-display">Welcome to AO Farms Portal</h2>
-              <p className="text-sm text-muted-foreground">
-                Log in to view your delivery history, track orders, and browse our fresh dairy
-                products.
-              </p>
-            </div>
-
-            <div className="space-y-3 text-left bg-muted/50 rounded-lg p-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                What you can do:
-              </p>
-              <div className="space-y-2">
-                {[
-                  { icon: Package, text: 'Browse our full product catalog' },
-                  { icon: Truck, text: 'View your personal delivery history' },
-                  { icon: User, text: 'Report delivery issues to our team' },
-                ].map(({ icon: Icon, text }) => (
-                  <div key={text} className="flex items-center gap-2 text-sm text-foreground">
-                    <Icon className="w-4 h-4 text-primary flex-shrink-0" />
-                    {text}
+          <Card className="shadow-xl border-border">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Sign In</CardTitle>
+              <CardDescription>Enter your credentials provided by AO Farms admin</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-1">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    placeholder="Your username"
+                    required
+                    autoComplete="username"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Your password"
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+                {loginError && (
+                  <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                    {loginError}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <Button
-              onClick={handleLogin}
-              disabled={isLoggingIn}
-              className="w-full"
-              size="lg"
-            >
-              {isLoggingIn ? (
-                <>
-                  <span className="animate-spin mr-2 inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
-                  Logging in…
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Login with Internet Identity
-                </>
-              )}
-            </Button>
-
-            <p className="text-xs text-muted-foreground">
-              Secure login using passkeys, Google, or Apple — no password needed.
-            </p>
-          </CardContent>
-        </Card>
+                )}
+                <Button
+                  type="submit"
+                  disabled={customerLogin.isPending}
+                  className="w-full bg-primary hover:bg-primary/90 h-11 text-base"
+                >
+                  {customerLogin.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Signing in...</>
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </form>
+              <p className="text-xs text-center text-muted-foreground mt-4">
+                Don't have an account? Contact AO Farms admin to get access.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
-  // Authenticated — show portal content
   return (
-    <>
-      <ProfileSetupModal open={showProfileSetup} />
-
-      <div className="space-y-6">
-        {/* Portal Header */}
-        <div className="relative rounded-2xl overflow-hidden h-36">
-          <img
-            src="/assets/generated/farm-hero.dim_1200x300.png"
-            alt="AO Farms"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center justify-between px-6">
-            <div>
-              <h1 className="text-2xl font-bold text-white font-display">Customer Portal</h1>
-              {userProfile && (
-                <p className="text-white/80 text-sm mt-1">
-                  Welcome back, <span className="font-semibold text-white">{userProfile.name}</span>!
-                </p>
-              )}
+    <div className="min-h-screen bg-customer-bg">
+      {/* Customer Header */}
+      <header className="bg-white border-b border-border shadow-sm sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/assets/generated/ao-farms-logo.dim_320x160.png" alt="AO Farms" className="h-8 object-contain" />
+            <span className="font-semibold text-admin-dark hidden sm:block">Customer Portal</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-muted rounded-full px-3 py-1">
+              <User className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">{session?.name || session?.username}</span>
             </div>
-            <div className="flex items-center gap-3">
-              {userProfile && (
-                <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
-                  <User className="w-3 h-3 mr-1" />
-                  {userProfile.name}
-                </Badge>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm"
-              >
-                <LogOut className="w-4 h-4 mr-1" />
-                Logout
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" onClick={logout} className="gap-2 text-muted-foreground hover:text-foreground">
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
           </div>
         </div>
+      </header>
 
-        {/* Tabs */}
-        <Tabs defaultValue="catalog">
-          <TabsList className="grid w-full grid-cols-2 max-w-sm">
-            <TabsTrigger value="catalog" className="flex items-center gap-1.5">
-              <Package className="w-4 h-4" />
-              Products
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-admin-dark">Welcome back, {session?.name || session?.username}!</h1>
+          <p className="text-muted-foreground">Place orders and track your deliveries.</p>
+        </div>
+
+        <Tabs defaultValue="place-order" className="space-y-6">
+          <TabsList className="bg-white border border-border shadow-sm h-12 p-1 gap-1">
+            <TabsTrigger value="place-order" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <ShoppingCart className="h-4 w-4" />
+              Place Order
             </TabsTrigger>
-            <TabsTrigger value="deliveries" className="flex items-center gap-1.5">
-              <Truck className="w-4 h-4" />
+            <TabsTrigger value="my-deliveries" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Package className="h-4 w-4" />
               My Deliveries
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="catalog" className="mt-6">
-            <ProductCatalog />
+          <TabsContent value="place-order">
+            <div className="bg-white rounded-xl border border-border shadow-sm p-6">
+              {session && <CustomerPlaceOrder customerId={session.customerId} />}
+            </div>
           </TabsContent>
 
-          <TabsContent value="deliveries" className="mt-6">
-            <CustomerDeliveryList />
+          <TabsContent value="my-deliveries">
+            <div className="bg-white rounded-xl border border-border shadow-sm p-6">
+              <CustomerMyDeliveries orders={myOrders} isLoading={ordersLoading} />
+            </div>
           </TabsContent>
         </Tabs>
-      </div>
-    </>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border mt-12 py-6 text-center text-sm text-muted-foreground">
+        <p>© {new Date().getFullYear()} AO Farms. Built with ❤️ using{' '}
+          <a href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">caffeine.ai</a>
+        </p>
+      </footer>
+    </div>
   );
 }

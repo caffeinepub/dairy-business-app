@@ -1,38 +1,25 @@
 import React, { useState } from 'react';
-import { toast } from 'sonner';
-import { PlusCircle, Edit2, Beef } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Beef, Heart, AlertTriangle, Tag } from 'lucide-react';
+import { useGetAllCattle, useAddCattle, useUpdateCattle, useDeleteCattle } from '../hooks/useAdminQueries';
+import { CattleAvailability, HealthStatus, type Cattle } from '../backend';
 import CattleForm from '../components/CattleForm';
-import { useGetAllCattle, useAddCattle, useUpdateCattle } from '../hooks/useQueries';
-import type { Cattle, HealthStatus } from '../backend';
-import { CattleStatus } from '../backend';
+import CattleHealthChart from '../components/CattleHealthChart';
 
 function healthLabel(h: HealthStatus): string {
-  if (h.__kind__ === 'sick') return `Sick (${h.sick.condition})`;
-  if (h.__kind__ === 'recovered') return 'Recovered';
+  if (h === HealthStatus.Sick) return 'Sick';
+  if (h === HealthStatus.Recovered) return 'Recovered';
   return 'Healthy';
 }
 
 function healthVariant(h: HealthStatus): 'default' | 'destructive' | 'secondary' | 'outline' {
-  if (h.__kind__ === 'sick') return 'destructive';
-  if (h.__kind__ === 'recovered') return 'secondary';
+  if (h === HealthStatus.Sick) return 'destructive';
+  if (h === HealthStatus.Recovered) return 'secondary';
   return 'default';
 }
 
@@ -40,218 +27,197 @@ export default function CattleManagement() {
   const { data: cattleList = [], isLoading } = useGetAllCattle();
   const addCattle = useAddCattle();
   const updateCattle = useUpdateCattle();
+  const deleteCattle = useDeleteCattle();
 
   const [addOpen, setAddOpen] = useState(false);
   const [editCattle, setEditCattle] = useState<Cattle | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Cattle | null>(null);
 
-  const activeCattle = cattleList.filter((c) => c.status === CattleStatus.active);
-  const sickCattle = cattleList.filter((c) => c.healthStatus.__kind__ === 'sick');
-  const avgMilk =
-    cattleList.length > 0
-      ? cattleList.reduce((sum, c) => sum + c.dailyMilkProductionLiters, 0) / cattleList.length
-      : 0;
+  const availableCattle = cattleList.filter(c => c.availability === CattleAvailability.Available).length;
+  const sickCattle = cattleList.filter(c => c.healthStatus === HealthStatus.Sick).length;
+  const avgMilking = cattleList.length > 0
+    ? cattleList.reduce((sum, c) => sum + c.milkingCapacity, 0) / cattleList.length
+    : 0;
 
-  const handleAdd = async (data: {
-    breed: string;
-    ageMonths: bigint;
-    dailyMilkProductionLiters: number;
-    healthStatus: HealthStatus;
-    purchaseDate: bigint;
-    purchaseCost: number;
-    notes: string;
-    status: CattleStatus;
-  }) => {
-    try {
-      const result = await addCattle.mutateAsync(data);
-      if (result === null) {
-        toast.error('A cattle record with this breed already exists.');
-      } else {
-        toast.success('Cattle added successfully!');
-        setAddOpen(false);
-      }
-    } catch (err) {
-      toast.error('Failed to add cattle. Please try again.');
-    }
+  const handleAdd = async (data: Parameters<typeof addCattle.mutateAsync>[0]) => {
+    await addCattle.mutateAsync(data);
+    setAddOpen(false);
   };
 
-  const handleEdit = async (data: {
-    breed: string;
-    ageMonths: bigint;
-    dailyMilkProductionLiters: number;
-    healthStatus: HealthStatus;
-    purchaseDate: bigint;
-    purchaseCost: number;
-    notes: string;
-    status: CattleStatus;
-  }) => {
+  const handleEdit = async (data: Parameters<typeof addCattle.mutateAsync>[0]) => {
     if (!editCattle) return;
-    try {
-      await updateCattle.mutateAsync({ id: editCattle.id, ...data });
-      toast.success('Cattle updated successfully!');
-      setEditCattle(null);
-    } catch (err) {
-      toast.error('Failed to update cattle. Please try again.');
-    }
+    await updateCattle.mutateAsync({ cattleId: editCattle.id, ...data });
+    setEditCattle(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    await deleteCattle.mutateAsync(deleteConfirm.id);
+    setDeleteConfirm(null);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground font-display">Cattle Management</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage your herd, health records, and milk production data.
-          </p>
+          <h1 className="text-2xl font-bold text-admin-dark flex items-center gap-2">
+            <Beef className="h-6 w-6 text-primary" /> Cattle Management
+          </h1>
+          <p className="text-muted-foreground">Manage your cattle records</p>
         </div>
-        <Button onClick={() => setAddOpen(true)} className="gap-2">
-          <PlusCircle className="h-4 w-4" />
-          Add Cattle
+        <Button onClick={() => setAddOpen(true)} className="bg-primary hover:bg-primary/90 gap-2">
+          <Plus className="h-4 w-4" /> Add Cattle
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">
-              Total Cattle
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{cattleList.length}</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="shadow-card">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-sm text-muted-foreground">Total</p>
+            <p className="text-2xl font-bold">{isLoading ? '—' : cattleList.length}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">
-              Active
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-green-600">{activeCattle.length}</p>
+        <Card className="shadow-card">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-sm text-muted-foreground">Available</p>
+            <p className="text-2xl font-bold text-green-600">{isLoading ? '—' : availableCattle}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">
-              Sick
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-red-600">{sickCattle.length}</p>
+        <Card className="shadow-card">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-sm text-muted-foreground">Sick</p>
+            <p className="text-2xl font-bold text-red-600">{isLoading ? '—' : sickCattle}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">
-              Avg Daily Milk
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{avgMilk.toFixed(1)} L</p>
+        <Card className="shadow-card">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-sm text-muted-foreground">Avg Milking (L/day)</p>
+            <p className="text-2xl font-bold">{isLoading ? '—' : avgMilking.toFixed(1)}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
-              Loading cattle records...
-            </div>
-          ) : cattleList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-              <Beef className="h-10 w-10 opacity-30" />
-              <p>No cattle records yet. Add your first cattle!</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Table */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Tag #</TableHead>
+                  <TableHead>Breed</TableHead>
+                  <TableHead>Purchase Date</TableHead>
+                  <TableHead>Milking (L/day)</TableHead>
+                  <TableHead>Price (₹)</TableHead>
+                  <TableHead>Availability</TableHead>
+                  <TableHead>Health</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 8 }).map((_, j) => (
+                        <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : cattleList.length === 0 ? (
                   <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Breed</TableHead>
-                    <TableHead>Age (mo)</TableHead>
-                    <TableHead>Daily Milk (L)</TableHead>
-                    <TableHead>Health</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Purchase Cost</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                      No cattle records. Add your first cattle.
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cattleList.map((cattle) => (
-                    <TableRow key={cattle.id.toString()}>
-                      <TableCell className="font-mono text-xs">
-                        #{cattle.id.toString()}
+                ) : (
+                  cattleList.map(cattle => (
+                    <TableRow key={cattle.id.toString()} className="hover:bg-muted/30">
+                      <TableCell className="font-mono font-medium">
+                        <span className="flex items-center gap-1"><Tag className="h-3 w-3" />{cattle.tagNumber}</span>
                       </TableCell>
-                      <TableCell className="font-medium">{cattle.breed}</TableCell>
-                      <TableCell>{cattle.ageMonths.toString()}</TableCell>
-                      <TableCell>{cattle.dailyMilkProductionLiters.toFixed(1)}</TableCell>
+                      <TableCell>{cattle.breed}</TableCell>
+                      <TableCell>{new Date(Number(cattle.dateOfPurchase) / 1_000_000).toLocaleDateString()}</TableCell>
+                      <TableCell>{cattle.milkingCapacity.toFixed(1)}</TableCell>
+                      <TableCell>₹{cattle.purchasePrice.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={cattle.availability === CattleAvailability.Available ? 'default' : 'outline'}>
+                          {String(cattle.availability)}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={healthVariant(cattle.healthStatus)}>
                           {healthLabel(cattle.healthStatus)}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            cattle.status === CattleStatus.active ? 'default' : 'outline'
-                          }
-                        >
-                          {cattle.status === CattleStatus.active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>₹{cattle.purchaseCost.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditCattle(cattle)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => setEditCattle(cattle)}>Edit</Button>
+                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteConfirm(cattle)}>Delete</Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        {/* Health Chart */}
+        <div>
+          <Card className="shadow-card">
+            <CardContent className="pt-4">
+              <p className="text-sm font-semibold mb-2 flex items-center gap-1"><Heart className="h-4 w-4 text-red-500" /> Health Overview</p>
+              <CattleHealthChart cattle={cattleList} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Add Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add Cattle</DialogTitle>
-            <DialogDescription>
-              Enter the details for the new cattle record.
-            </DialogDescription>
-          </DialogHeader>
-          <CattleForm onSubmit={handleAdd} isLoading={addCattle.isPending} />
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Add New Cattle</DialogTitle></DialogHeader>
+          <CattleForm
+            onSubmit={handleAdd}
+            onCancel={() => setAddOpen(false)}
+            isLoading={addCattle.isPending}
+          />
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editCattle} onOpenChange={(open) => !open && setEditCattle(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Cattle</DialogTitle>
-            <DialogDescription>
-              Update the details for this cattle record.
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog open={!!editCattle} onOpenChange={() => setEditCattle(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Edit Cattle Record</DialogTitle></DialogHeader>
           {editCattle && (
             <CattleForm
               initialData={editCattle}
               onSubmit={handleEdit}
+              onCancel={() => setEditCattle(null)}
               isLoading={updateCattle.isPending}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Delete Cattle</DialogTitle></DialogHeader>
+          <div className="flex items-start gap-3 py-2">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete cattle <strong>{deleteConfirm?.tagNumber}</strong>? This cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteCattle.isPending}>
+              {deleteCattle.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

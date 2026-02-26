@@ -89,126 +89,95 @@ export class ExternalBlob {
         return this;
     }
 }
-export interface CustomerFeedback {
-    resolved: boolean;
-    deliveryId: bigint;
-    customerPrincipal: Principal;
-    message: string;
-    timestamp: Time;
-    flagged: boolean;
-    feedbackId: bigint;
-}
-export interface MilkRecord {
-    id: bigint;
-    date: Time;
-    cattleId: bigint;
-    quantityLiters: number;
-    notes: string;
-}
-export interface DeliveryRecord {
-    id: bigint;
-    status: Variant_missed_delivered;
-    customerPrincipal?: Principal;
-    date: Time;
-    quantityLiters: number;
-    deliveryBoyName: string;
-    notes: string;
-}
-export type Time = bigint;
 export interface Cattle {
     id: bigint;
-    status: CattleStatus;
-    purchaseCost: number;
-    purchaseDate: Time;
-    ageMonths: bigint;
+    purchasePrice: number;
+    milkingCapacity: number;
+    dateOfPurchase: bigint;
     healthStatus: HealthStatus;
-    dailyMilkProductionLiters: number;
-    notes: string;
+    availability: CattleAvailability;
     breed: string;
+    tagNumber: string;
 }
-export type HealthStatus = {
-    __kind__: "recovered";
-    recovered: null;
-} | {
-    __kind__: "sick";
-    sick: {
-        treatment: string;
-        medications: Array<string>;
-        condition: string;
-    };
-} | {
-    __kind__: "healthy";
-    healthy: null;
-};
-export interface Customer {
+export interface CustomerAccount {
     id: bigint;
-    active: boolean;
+    username: string;
     name: string;
+    isActive: boolean;
     address: string;
+    passwordHash: string;
     phone: string;
+}
+export type LoginResult = {
+    __kind__: "ok";
+    ok: string;
+} | {
+    __kind__: "err";
+    err: LoginError;
+};
+export interface CattleOrder {
+    status: OrderStatus;
+    deliveryNotes: string;
+    orderDate: bigint;
+    orderId: bigint;
+    cattleTagNumber: string;
+    customerId: bigint;
 }
 export interface UserProfile {
     name: string;
 }
-export interface MilkProductionRecord {
-    id: bigint;
-    date: Time;
-    quantityLiters: number;
-    notes: string;
+export enum CattleAvailability {
+    Available = "Available",
+    Reserved = "Reserved",
+    Sold = "Sold"
 }
-export enum CattleStatus {
-    active = "active",
-    inactive = "inactive"
+export enum HealthStatus {
+    Healthy = "Healthy",
+    Sick = "Sick",
+    Recovered = "Recovered"
+}
+export enum LoginError {
+    AccountNotFound = "AccountNotFound",
+    InvalidCredentials = "InvalidCredentials",
+    AccountInactive = "AccountInactive"
+}
+export enum OrderStatus {
+    Delivered = "Delivered",
+    Confirmed = "Confirmed",
+    Cancelled = "Cancelled",
+    OutForDelivery = "OutForDelivery",
+    Pending = "Pending"
 }
 export enum UserRole {
     admin = "admin",
     user = "user",
     guest = "guest"
 }
-export enum Variant_missed_delivered {
-    missed = "missed",
-    delivered = "delivered"
-}
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
-    addCattle(breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string, status: CattleStatus): Promise<bigint | null>;
-    addCustomer(name: string, address: string, phone: string, active: boolean): Promise<bigint | null>;
-    addDeliveryRecord(customerPrincipal: Principal, deliveryBoyName: string, date: Time, quantityLiters: number, status: Variant_missed_delivered, notes: string): Promise<bigint>;
-    addMilkProductionRecord(date: Time, quantityLiters: number, notes: string): Promise<bigint>;
-    addMilkRecord(cattleId: bigint, date: Time, quantityLiters: number, notes: string): Promise<bigint>;
+    addCattle(tagNumber: string, breed: string, dateOfPurchase: bigint, milkingCapacity: number, purchasePrice: number, availability: CattleAvailability, healthStatus: HealthStatus): Promise<bigint>;
+    addCustomer(name: string, phone: string, address: string, username: string, passwordHash: string, isActive: boolean): Promise<bigint>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    customerLogin(username: string, password: string): Promise<LoginResult>;
+    deleteCattle(cattleId: bigint): Promise<void>;
+    deleteCustomer(customerId: bigint): Promise<void>;
     getAllCattle(): Promise<Array<Cattle>>;
-    getAllHealthyCattle(): Promise<Array<Cattle>>;
-    getAllMilkRecords(): Promise<Array<MilkRecord>>;
-    getAllRecoveredCattle(): Promise<Array<Cattle>>;
-    getAllSickCattle(): Promise<Array<Cattle>>;
+    getAllCustomers(): Promise<Array<CustomerAccount>>;
+    getAllOrders(): Promise<Array<CattleOrder>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getCattleByAgeRange(minAge: bigint, maxAge: bigint): Promise<Array<Cattle>>;
-    getCattleByBreed(breed: string): Promise<Array<Cattle>>;
-    getCattleByHealthStatus(healthStatus: HealthStatus): Promise<Array<Cattle>>;
-    getCattleByMilkProductionRange(minLiters: number, maxLiters: number): Promise<Array<Cattle>>;
-    getCattleByPurchaseDateRange(startDate: Time, endDate: Time): Promise<Array<Cattle>>;
-    getCattleByStatus(status: CattleStatus): Promise<Array<Cattle>>;
-    getCustomers(): Promise<Array<Customer>>;
-    getDeliveryRecordsByCustomer(customerPrincipal: Principal): Promise<Array<DeliveryRecord>>;
-    getDeliveryRecordsByDate(date: Time): Promise<Array<DeliveryRecord>>;
-    getDeliveryRecordsByMonth(month: bigint, year: bigint): Promise<Array<DeliveryRecord>>;
-    getFlaggedFeedback(): Promise<Array<CustomerFeedback>>;
-    getMilkProductionRecords(): Promise<Array<MilkProductionRecord>>;
-    getMilkRecordsByCattle(cattleId: bigint): Promise<Array<MilkRecord>>;
-    getMilkRecordsByDateRange(startDate: Time, endDate: Time): Promise<Array<MilkRecord>>;
-    getMilkRecordsByMonth(month: bigint, year: bigint): Promise<Array<MilkProductionRecord>>;
-    getMyDeliveries(): Promise<Array<DeliveryRecord>>;
+    getMyOrders(): Promise<Array<CattleOrder>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
-    resolveFeedback(feedbackId: bigint): Promise<void>;
+    linkCustomerPrincipal(customerId: bigint, customerPrincipal: Principal): Promise<void>;
+    placeOrder(customerId: bigint, cattleTagNumber: string, deliveryNotes: string): Promise<bigint>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    submitFeedback(deliveryId: bigint, message: string): Promise<void>;
-    updateCattle(cattleId: bigint, breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string, status: CattleStatus): Promise<void>;
-    updateCustomer(customerId: bigint, name: string, address: string, phone: string, active: boolean): Promise<void>;
+    setCustomerActive(customerId: bigint, isActive: boolean): Promise<void>;
+    updateCattle(cattleId: bigint, tagNumber: string, breed: string, dateOfPurchase: bigint, milkingCapacity: number, purchasePrice: number, availability: CattleAvailability, healthStatus: HealthStatus): Promise<void>;
+    updateCustomer(customerId: bigint, name: string, phone: string, address: string, username: string, passwordHash: string, isActive: boolean): Promise<void>;
+    updateOrderStatus(orderId: bigint, status: OrderStatus, deliveryNotes: string): Promise<void>;
 }
-import type { Cattle as _Cattle, CattleStatus as _CattleStatus, DeliveryRecord as _DeliveryRecord, HealthStatus as _HealthStatus, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { Cattle as _Cattle, CattleAvailability as _CattleAvailability, CattleOrder as _CattleOrder, HealthStatus as _HealthStatus, LoginError as _LoginError, LoginResult as _LoginResult, OrderStatus as _OrderStatus, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
@@ -225,87 +194,87 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async addCattle(arg0: string, arg1: bigint, arg2: number, arg3: HealthStatus, arg4: Time, arg5: number, arg6: string, arg7: CattleStatus): Promise<bigint | null> {
+    async addCattle(arg0: string, arg1: string, arg2: bigint, arg3: number, arg4: number, arg5: CattleAvailability, arg6: HealthStatus): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await this.actor.addCattle(arg0, arg1, arg2, to_candid_HealthStatus_n1(this._uploadFile, this._downloadFile, arg3), arg4, arg5, arg6, to_candid_CattleStatus_n3(this._uploadFile, this._downloadFile, arg7));
-                return from_candid_opt_n5(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.addCattle(arg0, arg1, arg2, to_candid_HealthStatus_n1(this._uploadFile, this._downloadFile, arg3), arg4, arg5, arg6, to_candid_CattleStatus_n3(this._uploadFile, this._downloadFile, arg7));
-            return from_candid_opt_n5(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async addCustomer(arg0: string, arg1: string, arg2: string, arg3: boolean): Promise<bigint | null> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.addCustomer(arg0, arg1, arg2, arg3);
-                return from_candid_opt_n5(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.addCustomer(arg0, arg1, arg2, arg3);
-            return from_candid_opt_n5(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async addDeliveryRecord(arg0: Principal, arg1: string, arg2: Time, arg3: number, arg4: Variant_missed_delivered, arg5: string): Promise<bigint> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.addDeliveryRecord(arg0, arg1, arg2, arg3, to_candid_variant_n6(this._uploadFile, this._downloadFile, arg4), arg5);
+                const result = await this.actor.addCattle(arg0, arg1, arg2, arg3, arg4, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg5), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg6));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addDeliveryRecord(arg0, arg1, arg2, arg3, to_candid_variant_n6(this._uploadFile, this._downloadFile, arg4), arg5);
+            const result = await this.actor.addCattle(arg0, arg1, arg2, arg3, arg4, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg5), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg6));
             return result;
         }
     }
-    async addMilkProductionRecord(arg0: Time, arg1: number, arg2: string): Promise<bigint> {
+    async addCustomer(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: boolean): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await this.actor.addMilkProductionRecord(arg0, arg1, arg2);
+                const result = await this.actor.addCustomer(arg0, arg1, arg2, arg3, arg4, arg5);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addMilkProductionRecord(arg0, arg1, arg2);
-            return result;
-        }
-    }
-    async addMilkRecord(arg0: bigint, arg1: Time, arg2: number, arg3: string): Promise<bigint> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.addMilkRecord(arg0, arg1, arg2, arg3);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.addMilkRecord(arg0, arg1, arg2, arg3);
+            const result = await this.actor.addCustomer(arg0, arg1, arg2, arg3, arg4, arg5);
             return result;
         }
     }
     async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n7(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n5(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n7(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n5(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async customerLogin(arg0: string, arg1: string): Promise<LoginResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.customerLogin(arg0, arg1);
+                return from_candid_LoginResult_n7(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.customerLogin(arg0, arg1);
+            return from_candid_LoginResult_n7(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async deleteCattle(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteCattle(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteCattle(arg0);
+            return result;
+        }
+    }
+    async deleteCustomer(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteCustomer(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteCustomer(arg0);
             return result;
         }
     }
@@ -313,336 +282,98 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getAllCattle();
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAllCattle();
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getAllHealthyCattle(): Promise<Array<Cattle>> {
+    async getAllCustomers(): Promise<Array<CustomerAccount>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getAllHealthyCattle();
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getAllHealthyCattle();
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getAllMilkRecords(): Promise<Array<MilkRecord>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getAllMilkRecords();
+                const result = await this.actor.getAllCustomers();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getAllMilkRecords();
+            const result = await this.actor.getAllCustomers();
             return result;
         }
     }
-    async getAllRecoveredCattle(): Promise<Array<Cattle>> {
+    async getAllOrders(): Promise<Array<CattleOrder>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getAllRecoveredCattle();
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.getAllOrders();
+                return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getAllRecoveredCattle();
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getAllSickCattle(): Promise<Array<Cattle>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getAllSickCattle();
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getAllSickCattle();
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.getAllOrders();
+            return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
-                return from_candid_opt_n16(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n23(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserProfile();
-            return from_candid_opt_n16(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n23(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n17(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n24(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n17(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n24(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getCattleByAgeRange(arg0: bigint, arg1: bigint): Promise<Array<Cattle>> {
+    async getMyOrders(): Promise<Array<CattleOrder>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getCattleByAgeRange(arg0, arg1);
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.getMyOrders();
+                return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getCattleByAgeRange(arg0, arg1);
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getCattleByBreed(arg0: string): Promise<Array<Cattle>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getCattleByBreed(arg0);
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getCattleByBreed(arg0);
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getCattleByHealthStatus(arg0: HealthStatus): Promise<Array<Cattle>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getCattleByHealthStatus(to_candid_HealthStatus_n1(this._uploadFile, this._downloadFile, arg0));
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getCattleByHealthStatus(to_candid_HealthStatus_n1(this._uploadFile, this._downloadFile, arg0));
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getCattleByMilkProductionRange(arg0: number, arg1: number): Promise<Array<Cattle>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getCattleByMilkProductionRange(arg0, arg1);
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getCattleByMilkProductionRange(arg0, arg1);
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getCattleByPurchaseDateRange(arg0: Time, arg1: Time): Promise<Array<Cattle>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getCattleByPurchaseDateRange(arg0, arg1);
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getCattleByPurchaseDateRange(arg0, arg1);
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getCattleByStatus(arg0: CattleStatus): Promise<Array<Cattle>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getCattleByStatus(to_candid_CattleStatus_n3(this._uploadFile, this._downloadFile, arg0));
-                return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getCattleByStatus(to_candid_CattleStatus_n3(this._uploadFile, this._downloadFile, arg0));
-            return from_candid_vec_n9(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getCustomers(): Promise<Array<Customer>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getCustomers();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getCustomers();
-            return result;
-        }
-    }
-    async getDeliveryRecordsByCustomer(arg0: Principal): Promise<Array<DeliveryRecord>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getDeliveryRecordsByCustomer(arg0);
-                return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getDeliveryRecordsByCustomer(arg0);
-            return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getDeliveryRecordsByDate(arg0: Time): Promise<Array<DeliveryRecord>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getDeliveryRecordsByDate(arg0);
-                return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getDeliveryRecordsByDate(arg0);
-            return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getDeliveryRecordsByMonth(arg0: bigint, arg1: bigint): Promise<Array<DeliveryRecord>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getDeliveryRecordsByMonth(arg0, arg1);
-                return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getDeliveryRecordsByMonth(arg0, arg1);
-            return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getFlaggedFeedback(): Promise<Array<CustomerFeedback>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getFlaggedFeedback();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getFlaggedFeedback();
-            return result;
-        }
-    }
-    async getMilkProductionRecords(): Promise<Array<MilkProductionRecord>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getMilkProductionRecords();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getMilkProductionRecords();
-            return result;
-        }
-    }
-    async getMilkRecordsByCattle(arg0: bigint): Promise<Array<MilkRecord>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getMilkRecordsByCattle(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getMilkRecordsByCattle(arg0);
-            return result;
-        }
-    }
-    async getMilkRecordsByDateRange(arg0: Time, arg1: Time): Promise<Array<MilkRecord>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getMilkRecordsByDateRange(arg0, arg1);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getMilkRecordsByDateRange(arg0, arg1);
-            return result;
-        }
-    }
-    async getMilkRecordsByMonth(arg0: bigint, arg1: bigint): Promise<Array<MilkProductionRecord>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getMilkRecordsByMonth(arg0, arg1);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getMilkRecordsByMonth(arg0, arg1);
-            return result;
-        }
-    }
-    async getMyDeliveries(): Promise<Array<DeliveryRecord>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getMyDeliveries();
-                return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getMyDeliveries();
-            return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.getMyOrders();
+            return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
         }
     }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n16(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n23(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n16(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n23(this._uploadFile, this._downloadFile, result);
         }
     }
     async isCallerAdmin(): Promise<boolean> {
@@ -659,17 +390,31 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async resolveFeedback(arg0: bigint): Promise<void> {
+    async linkCustomerPrincipal(arg0: bigint, arg1: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.resolveFeedback(arg0);
+                const result = await this.actor.linkCustomerPrincipal(arg0, arg1);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.resolveFeedback(arg0);
+            const result = await this.actor.linkCustomerPrincipal(arg0, arg1);
+            return result;
+        }
+    }
+    async placeOrder(arg0: bigint, arg1: string, arg2: string): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.placeOrder(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.placeOrder(arg0, arg1, arg2);
             return result;
         }
     }
@@ -687,180 +432,185 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async submitFeedback(arg0: bigint, arg1: string): Promise<void> {
+    async setCustomerActive(arg0: bigint, arg1: boolean): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.submitFeedback(arg0, arg1);
+                const result = await this.actor.setCustomerActive(arg0, arg1);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.submitFeedback(arg0, arg1);
+            const result = await this.actor.setCustomerActive(arg0, arg1);
             return result;
         }
     }
-    async updateCattle(arg0: bigint, arg1: string, arg2: bigint, arg3: number, arg4: HealthStatus, arg5: Time, arg6: number, arg7: string, arg8: CattleStatus): Promise<void> {
+    async updateCattle(arg0: bigint, arg1: string, arg2: string, arg3: bigint, arg4: number, arg5: number, arg6: CattleAvailability, arg7: HealthStatus): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateCattle(arg0, arg1, arg2, arg3, to_candid_HealthStatus_n1(this._uploadFile, this._downloadFile, arg4), arg5, arg6, arg7, to_candid_CattleStatus_n3(this._uploadFile, this._downloadFile, arg8));
+                const result = await this.actor.updateCattle(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg6), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg7));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateCattle(arg0, arg1, arg2, arg3, to_candid_HealthStatus_n1(this._uploadFile, this._downloadFile, arg4), arg5, arg6, arg7, to_candid_CattleStatus_n3(this._uploadFile, this._downloadFile, arg8));
+            const result = await this.actor.updateCattle(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg6), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg7));
             return result;
         }
     }
-    async updateCustomer(arg0: bigint, arg1: string, arg2: string, arg3: string, arg4: boolean): Promise<void> {
+    async updateCustomer(arg0: bigint, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: boolean): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateCustomer(arg0, arg1, arg2, arg3, arg4);
+                const result = await this.actor.updateCustomer(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateCustomer(arg0, arg1, arg2, arg3, arg4);
+            const result = await this.actor.updateCustomer(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+            return result;
+        }
+    }
+    async updateOrderStatus(arg0: bigint, arg1: OrderStatus, arg2: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n26(this._uploadFile, this._downloadFile, arg1), arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n26(this._uploadFile, this._downloadFile, arg1), arg2);
             return result;
         }
     }
 }
-function from_candid_CattleStatus_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CattleStatus): CattleStatus {
-    return from_candid_variant_n13(_uploadFile, _downloadFile, value);
+function from_candid_CattleAvailability_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CattleAvailability): CattleAvailability {
+    return from_candid_variant_n17(_uploadFile, _downloadFile, value);
 }
-function from_candid_Cattle_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Cattle): Cattle {
-    return from_candid_record_n11(_uploadFile, _downloadFile, value);
+function from_candid_CattleOrder_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CattleOrder): CattleOrder {
+    return from_candid_record_n20(_uploadFile, _downloadFile, value);
 }
-function from_candid_DeliveryRecord_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _DeliveryRecord): DeliveryRecord {
-    return from_candid_record_n21(_uploadFile, _downloadFile, value);
+function from_candid_Cattle_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Cattle): Cattle {
+    return from_candid_record_n13(_uploadFile, _downloadFile, value);
 }
 function from_candid_HealthStatus_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _HealthStatus): HealthStatus {
     return from_candid_variant_n15(_uploadFile, _downloadFile, value);
 }
-function from_candid_UserRole_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n18(_uploadFile, _downloadFile, value);
+function from_candid_LoginError_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _LoginError): LoginError {
+    return from_candid_variant_n10(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+function from_candid_LoginResult_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _LoginResult): LoginResult {
+    return from_candid_variant_n8(_uploadFile, _downloadFile, value);
+}
+function from_candid_OrderStatus_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _OrderStatus): OrderStatus {
+    return from_candid_variant_n22(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserRole_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n25(_uploadFile, _downloadFile, value);
+}
+function from_candid_opt_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Principal]): Principal | null {
-    return value.length === 0 ? null : value[0];
-}
-function from_candid_opt_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
-    return value.length === 0 ? null : value[0];
-}
-function from_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: bigint;
-    status: _CattleStatus;
-    purchaseCost: number;
-    purchaseDate: _Time;
-    ageMonths: bigint;
+    purchasePrice: number;
+    milkingCapacity: number;
+    dateOfPurchase: bigint;
     healthStatus: _HealthStatus;
-    dailyMilkProductionLiters: number;
-    notes: string;
+    availability: _CattleAvailability;
     breed: string;
+    tagNumber: string;
 }): {
     id: bigint;
-    status: CattleStatus;
-    purchaseCost: number;
-    purchaseDate: Time;
-    ageMonths: bigint;
+    purchasePrice: number;
+    milkingCapacity: number;
+    dateOfPurchase: bigint;
     healthStatus: HealthStatus;
-    dailyMilkProductionLiters: number;
-    notes: string;
+    availability: CattleAvailability;
     breed: string;
+    tagNumber: string;
 } {
     return {
         id: value.id,
-        status: from_candid_CattleStatus_n12(_uploadFile, _downloadFile, value.status),
-        purchaseCost: value.purchaseCost,
-        purchaseDate: value.purchaseDate,
-        ageMonths: value.ageMonths,
+        purchasePrice: value.purchasePrice,
+        milkingCapacity: value.milkingCapacity,
+        dateOfPurchase: value.dateOfPurchase,
         healthStatus: from_candid_HealthStatus_n14(_uploadFile, _downloadFile, value.healthStatus),
-        dailyMilkProductionLiters: value.dailyMilkProductionLiters,
-        notes: value.notes,
-        breed: value.breed
+        availability: from_candid_CattleAvailability_n16(_uploadFile, _downloadFile, value.availability),
+        breed: value.breed,
+        tagNumber: value.tagNumber
     };
 }
-function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: bigint;
-    status: {
-        missed: null;
-    } | {
-        delivered: null;
-    };
-    customerPrincipal: [] | [Principal];
-    date: _Time;
-    quantityLiters: number;
-    deliveryBoyName: string;
-    notes: string;
+function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    status: _OrderStatus;
+    deliveryNotes: string;
+    orderDate: bigint;
+    orderId: bigint;
+    cattleTagNumber: string;
+    customerId: bigint;
 }): {
-    id: bigint;
-    status: Variant_missed_delivered;
-    customerPrincipal?: Principal;
-    date: Time;
-    quantityLiters: number;
-    deliveryBoyName: string;
-    notes: string;
+    status: OrderStatus;
+    deliveryNotes: string;
+    orderDate: bigint;
+    orderId: bigint;
+    cattleTagNumber: string;
+    customerId: bigint;
 } {
     return {
-        id: value.id,
-        status: from_candid_variant_n22(_uploadFile, _downloadFile, value.status),
-        customerPrincipal: record_opt_to_undefined(from_candid_opt_n23(_uploadFile, _downloadFile, value.customerPrincipal)),
-        date: value.date,
-        quantityLiters: value.quantityLiters,
-        deliveryBoyName: value.deliveryBoyName,
-        notes: value.notes
+        status: from_candid_OrderStatus_n21(_uploadFile, _downloadFile, value.status),
+        deliveryNotes: value.deliveryNotes,
+        orderDate: value.orderDate,
+        orderId: value.orderId,
+        cattleTagNumber: value.cattleTagNumber,
+        customerId: value.customerId
     };
 }
-function from_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    active: null;
+function from_candid_variant_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    AccountNotFound: null;
 } | {
-    inactive: null;
-}): CattleStatus {
-    return "active" in value ? CattleStatus.active : "inactive" in value ? CattleStatus.inactive : value;
+    InvalidCredentials: null;
+} | {
+    AccountInactive: null;
+}): LoginError {
+    return "AccountNotFound" in value ? LoginError.AccountNotFound : "InvalidCredentials" in value ? LoginError.InvalidCredentials : "AccountInactive" in value ? LoginError.AccountInactive : value;
 }
 function from_candid_variant_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    recovered: null;
+    Healthy: null;
 } | {
-    sick: {
-        treatment: string;
-        medications: Array<string>;
-        condition: string;
-    };
+    Sick: null;
 } | {
-    healthy: null;
-}): {
-    __kind__: "recovered";
-    recovered: null;
-} | {
-    __kind__: "sick";
-    sick: {
-        treatment: string;
-        medications: Array<string>;
-        condition: string;
-    };
-} | {
-    __kind__: "healthy";
-    healthy: null;
-} {
-    return "recovered" in value ? {
-        __kind__: "recovered",
-        recovered: value.recovered
-    } : "sick" in value ? {
-        __kind__: "sick",
-        sick: value.sick
-    } : "healthy" in value ? {
-        __kind__: "healthy",
-        healthy: value.healthy
-    } : value;
+    Recovered: null;
+}): HealthStatus {
+    return "Healthy" in value ? HealthStatus.Healthy : "Sick" in value ? HealthStatus.Sick : "Recovered" in value ? HealthStatus.Recovered : value;
 }
-function from_candid_variant_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    Available: null;
+} | {
+    Reserved: null;
+} | {
+    Sold: null;
+}): CattleAvailability {
+    return "Available" in value ? CattleAvailability.Available : "Reserved" in value ? CattleAvailability.Reserved : "Sold" in value ? CattleAvailability.Sold : value;
+}
+function from_candid_variant_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    Delivered: null;
+} | {
+    Confirmed: null;
+} | {
+    Cancelled: null;
+} | {
+    OutForDelivery: null;
+} | {
+    Pending: null;
+}): OrderStatus {
+    return "Delivered" in value ? OrderStatus.Delivered : "Confirmed" in value ? OrderStatus.Confirmed : "Cancelled" in value ? OrderStatus.Cancelled : "OutForDelivery" in value ? OrderStatus.OutForDelivery : "Pending" in value ? OrderStatus.Pending : value;
+}
+function from_candid_variant_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -869,83 +619,97 @@ function from_candid_variant_n18(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-function from_candid_variant_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    missed: null;
+function from_candid_variant_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: string;
 } | {
-    delivered: null;
-}): Variant_missed_delivered {
-    return "missed" in value ? Variant_missed_delivered.missed : "delivered" in value ? Variant_missed_delivered.delivered : value;
+    err: _LoginError;
+}): {
+    __kind__: "ok";
+    ok: string;
+} | {
+    __kind__: "err";
+    err: LoginError;
+} {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : "err" in value ? {
+        __kind__: "err",
+        err: from_candid_LoginError_n9(_uploadFile, _downloadFile, value.err)
+    } : value;
 }
-function from_candid_vec_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_DeliveryRecord>): Array<DeliveryRecord> {
-    return value.map((x)=>from_candid_DeliveryRecord_n20(_uploadFile, _downloadFile, x));
+function from_candid_vec_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Cattle>): Array<Cattle> {
+    return value.map((x)=>from_candid_Cattle_n12(_uploadFile, _downloadFile, x));
 }
-function from_candid_vec_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Cattle>): Array<Cattle> {
-    return value.map((x)=>from_candid_Cattle_n10(_uploadFile, _downloadFile, x));
+function from_candid_vec_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_CattleOrder>): Array<CattleOrder> {
+    return value.map((x)=>from_candid_CattleOrder_n19(_uploadFile, _downloadFile, x));
 }
-function to_candid_CattleStatus_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CattleStatus): _CattleStatus {
-    return to_candid_variant_n4(_uploadFile, _downloadFile, value);
-}
-function to_candid_HealthStatus_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: HealthStatus): _HealthStatus {
+function to_candid_CattleAvailability_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CattleAvailability): _CattleAvailability {
     return to_candid_variant_n2(_uploadFile, _downloadFile, value);
 }
-function to_candid_UserRole_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
-    return to_candid_variant_n8(_uploadFile, _downloadFile, value);
+function to_candid_HealthStatus_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: HealthStatus): _HealthStatus {
+    return to_candid_variant_n4(_uploadFile, _downloadFile, value);
 }
-function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    __kind__: "recovered";
-    recovered: null;
+function to_candid_OrderStatus_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): _OrderStatus {
+    return to_candid_variant_n27(_uploadFile, _downloadFile, value);
+}
+function to_candid_UserRole_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
+    return to_candid_variant_n6(_uploadFile, _downloadFile, value);
+}
+function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CattleAvailability): {
+    Available: null;
 } | {
-    __kind__: "sick";
-    sick: {
-        treatment: string;
-        medications: Array<string>;
-        condition: string;
-    };
+    Reserved: null;
 } | {
-    __kind__: "healthy";
-    healthy: null;
-}): {
-    recovered: null;
-} | {
-    sick: {
-        treatment: string;
-        medications: Array<string>;
-        condition: string;
-    };
-} | {
-    healthy: null;
+    Sold: null;
 } {
-    return value.__kind__ === "recovered" ? {
-        recovered: value.recovered
-    } : value.__kind__ === "sick" ? {
-        sick: value.sick
-    } : value.__kind__ === "healthy" ? {
-        healthy: value.healthy
+    return value == CattleAvailability.Available ? {
+        Available: null
+    } : value == CattleAvailability.Reserved ? {
+        Reserved: null
+    } : value == CattleAvailability.Sold ? {
+        Sold: null
     } : value;
 }
-function to_candid_variant_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CattleStatus): {
-    active: null;
+function to_candid_variant_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): {
+    Delivered: null;
 } | {
-    inactive: null;
+    Confirmed: null;
+} | {
+    Cancelled: null;
+} | {
+    OutForDelivery: null;
+} | {
+    Pending: null;
 } {
-    return value == CattleStatus.active ? {
-        active: null
-    } : value == CattleStatus.inactive ? {
-        inactive: null
+    return value == OrderStatus.Delivered ? {
+        Delivered: null
+    } : value == OrderStatus.Confirmed ? {
+        Confirmed: null
+    } : value == OrderStatus.Cancelled ? {
+        Cancelled: null
+    } : value == OrderStatus.OutForDelivery ? {
+        OutForDelivery: null
+    } : value == OrderStatus.Pending ? {
+        Pending: null
     } : value;
 }
-function to_candid_variant_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Variant_missed_delivered): {
-    missed: null;
+function to_candid_variant_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: HealthStatus): {
+    Healthy: null;
 } | {
-    delivered: null;
+    Sick: null;
+} | {
+    Recovered: null;
 } {
-    return value == Variant_missed_delivered.missed ? {
-        missed: null
-    } : value == Variant_missed_delivered.delivered ? {
-        delivered: null
+    return value == HealthStatus.Healthy ? {
+        Healthy: null
+    } : value == HealthStatus.Sick ? {
+        Sick: null
+    } : value == HealthStatus.Recovered ? {
+        Recovered: null
     } : value;
 }
-function to_candid_variant_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
+function to_candid_variant_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
     admin: null;
 } | {
     user: null;

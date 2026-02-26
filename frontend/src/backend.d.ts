@@ -7,121 +7,90 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export interface CustomerFeedback {
-    resolved: boolean;
-    deliveryId: bigint;
-    customerPrincipal: Principal;
-    message: string;
-    timestamp: Time;
-    flagged: boolean;
-    feedbackId: bigint;
-}
-export interface MilkRecord {
-    id: bigint;
-    date: Time;
-    cattleId: bigint;
-    quantityLiters: number;
-    notes: string;
-}
-export interface DeliveryRecord {
-    id: bigint;
-    status: Variant_missed_delivered;
-    customerPrincipal?: Principal;
-    date: Time;
-    quantityLiters: number;
-    deliveryBoyName: string;
-    notes: string;
-}
-export type Time = bigint;
 export interface Cattle {
     id: bigint;
-    status: CattleStatus;
-    purchaseCost: number;
-    purchaseDate: Time;
-    ageMonths: bigint;
+    purchasePrice: number;
+    milkingCapacity: number;
+    dateOfPurchase: bigint;
     healthStatus: HealthStatus;
-    dailyMilkProductionLiters: number;
-    notes: string;
+    availability: CattleAvailability;
     breed: string;
+    tagNumber: string;
 }
-export type HealthStatus = {
-    __kind__: "recovered";
-    recovered: null;
-} | {
-    __kind__: "sick";
-    sick: {
-        treatment: string;
-        medications: Array<string>;
-        condition: string;
-    };
-} | {
-    __kind__: "healthy";
-    healthy: null;
-};
-export interface Customer {
+export interface CustomerAccount {
     id: bigint;
-    active: boolean;
+    username: string;
     name: string;
+    isActive: boolean;
     address: string;
+    passwordHash: string;
     phone: string;
+}
+export type LoginResult = {
+    __kind__: "ok";
+    ok: string;
+} | {
+    __kind__: "err";
+    err: LoginError;
+};
+export interface CattleOrder {
+    status: OrderStatus;
+    deliveryNotes: string;
+    orderDate: bigint;
+    orderId: bigint;
+    cattleTagNumber: string;
+    customerId: bigint;
 }
 export interface UserProfile {
     name: string;
 }
-export interface MilkProductionRecord {
-    id: bigint;
-    date: Time;
-    quantityLiters: number;
-    notes: string;
+export enum CattleAvailability {
+    Available = "Available",
+    Reserved = "Reserved",
+    Sold = "Sold"
 }
-export enum CattleStatus {
-    active = "active",
-    inactive = "inactive"
+export enum HealthStatus {
+    Healthy = "Healthy",
+    Sick = "Sick",
+    Recovered = "Recovered"
+}
+export enum LoginError {
+    AccountNotFound = "AccountNotFound",
+    InvalidCredentials = "InvalidCredentials",
+    AccountInactive = "AccountInactive"
+}
+export enum OrderStatus {
+    Delivered = "Delivered",
+    Confirmed = "Confirmed",
+    Cancelled = "Cancelled",
+    OutForDelivery = "OutForDelivery",
+    Pending = "Pending"
 }
 export enum UserRole {
     admin = "admin",
     user = "user",
     guest = "guest"
 }
-export enum Variant_missed_delivered {
-    missed = "missed",
-    delivered = "delivered"
-}
 export interface backendInterface {
-    addCattle(breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string, status: CattleStatus): Promise<bigint | null>;
-    addCustomer(name: string, address: string, phone: string, active: boolean): Promise<bigint | null>;
-    addDeliveryRecord(customerPrincipal: Principal, deliveryBoyName: string, date: Time, quantityLiters: number, status: Variant_missed_delivered, notes: string): Promise<bigint>;
-    addMilkProductionRecord(date: Time, quantityLiters: number, notes: string): Promise<bigint>;
-    addMilkRecord(cattleId: bigint, date: Time, quantityLiters: number, notes: string): Promise<bigint>;
+    addCattle(tagNumber: string, breed: string, dateOfPurchase: bigint, milkingCapacity: number, purchasePrice: number, availability: CattleAvailability, healthStatus: HealthStatus): Promise<bigint>;
+    addCustomer(name: string, phone: string, address: string, username: string, passwordHash: string, isActive: boolean): Promise<bigint>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    customerLogin(username: string, password: string): Promise<LoginResult>;
+    deleteCattle(cattleId: bigint): Promise<void>;
+    deleteCustomer(customerId: bigint): Promise<void>;
     getAllCattle(): Promise<Array<Cattle>>;
-    getAllHealthyCattle(): Promise<Array<Cattle>>;
-    getAllMilkRecords(): Promise<Array<MilkRecord>>;
-    getAllRecoveredCattle(): Promise<Array<Cattle>>;
-    getAllSickCattle(): Promise<Array<Cattle>>;
+    getAllCustomers(): Promise<Array<CustomerAccount>>;
+    getAllOrders(): Promise<Array<CattleOrder>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getCattleByAgeRange(minAge: bigint, maxAge: bigint): Promise<Array<Cattle>>;
-    getCattleByBreed(breed: string): Promise<Array<Cattle>>;
-    getCattleByHealthStatus(healthStatus: HealthStatus): Promise<Array<Cattle>>;
-    getCattleByMilkProductionRange(minLiters: number, maxLiters: number): Promise<Array<Cattle>>;
-    getCattleByPurchaseDateRange(startDate: Time, endDate: Time): Promise<Array<Cattle>>;
-    getCattleByStatus(status: CattleStatus): Promise<Array<Cattle>>;
-    getCustomers(): Promise<Array<Customer>>;
-    getDeliveryRecordsByCustomer(customerPrincipal: Principal): Promise<Array<DeliveryRecord>>;
-    getDeliveryRecordsByDate(date: Time): Promise<Array<DeliveryRecord>>;
-    getDeliveryRecordsByMonth(month: bigint, year: bigint): Promise<Array<DeliveryRecord>>;
-    getFlaggedFeedback(): Promise<Array<CustomerFeedback>>;
-    getMilkProductionRecords(): Promise<Array<MilkProductionRecord>>;
-    getMilkRecordsByCattle(cattleId: bigint): Promise<Array<MilkRecord>>;
-    getMilkRecordsByDateRange(startDate: Time, endDate: Time): Promise<Array<MilkRecord>>;
-    getMilkRecordsByMonth(month: bigint, year: bigint): Promise<Array<MilkProductionRecord>>;
-    getMyDeliveries(): Promise<Array<DeliveryRecord>>;
+    getMyOrders(): Promise<Array<CattleOrder>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
-    resolveFeedback(feedbackId: bigint): Promise<void>;
+    linkCustomerPrincipal(customerId: bigint, customerPrincipal: Principal): Promise<void>;
+    placeOrder(customerId: bigint, cattleTagNumber: string, deliveryNotes: string): Promise<bigint>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    submitFeedback(deliveryId: bigint, message: string): Promise<void>;
-    updateCattle(cattleId: bigint, breed: string, ageMonths: bigint, dailyMilkProductionLiters: number, healthStatus: HealthStatus, purchaseDate: Time, purchaseCost: number, notes: string, status: CattleStatus): Promise<void>;
-    updateCustomer(customerId: bigint, name: string, address: string, phone: string, active: boolean): Promise<void>;
+    setCustomerActive(customerId: bigint, isActive: boolean): Promise<void>;
+    updateCattle(cattleId: bigint, tagNumber: string, breed: string, dateOfPurchase: bigint, milkingCapacity: number, purchasePrice: number, availability: CattleAvailability, healthStatus: HealthStatus): Promise<void>;
+    updateCustomer(customerId: bigint, name: string, phone: string, address: string, username: string, passwordHash: string, isActive: boolean): Promise<void>;
+    updateOrderStatus(orderId: bigint, status: OrderStatus, deliveryNotes: string): Promise<void>;
 }

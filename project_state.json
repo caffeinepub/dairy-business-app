@@ -1,30 +1,37 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Delivery tracking app with customer portal (Internet Identity login, product catalog, delivery history, feedback on incorrect deliveries) and admin panel (delivery management, flagged feedback dashboard, status updates).",
+  "summary": "Cattle & Customer Management System with separate admin and customer portals. Admin manages cattle (tag number, breed, date of purchase, milking capacity, purchase price, availability, health status), customers (add/edit/delete, active/inactive status), and all orders/delivery statuses. Customer portal allows only admin-created, active accounts to log in, place orders, and view their own delivery status. No self-registration allowed.",
   "architectural_notes": [
-    "Only admins can update delivery statuses; customers can only submit feedback",
-    "Customer feedback on disputed deliveries creates a flag visible in the admin panel for investigation",
-    "Authentication via Internet Identity (passkeys, Google, Apple)"
+    "Separate admin and customer authentication roles; customers can only log in if admin has created their account and set it to active",
+    "No self-registration for customers — all accounts are admin-managed"
   ],
   "known_issues": [
-    "Build has failed multiple times with AI/platform errors; may need to be simplified for successful deployment"
+    "Cattle and customer adding not working in previous build (Version 29)"
   ],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-create-a-customer-facing-portal-as-a-separate-route-customer-in-the-react-app-the-portal-must-require-internet-identity-login-once-logged-in-customers-see-1-a-full-product-catalog-page-2-their-personal-delivery-history-listing-completed-and-missed-deliveries-and-3-a-feedback-form-on-any-delivery-marked-delivered",
-      "title": "Create a customer-facing portal as a separate route (/customer) in the React app. The portal must require Internet Identity login. Once logged in, customers see: (1) a full product catalog page, (2) their personal delivery history listing completed and missed deliveries, and (3) a feedback form on any delivery marked 'delivered'.",
+      "id": "feature-build-the-admin-panel-frontend-with-a-protected-login-screen-username-password-after-login-provide-navigation-to-three-sections-1-cattle-management-table-listing-all-cattle-with-tag-number-breed-date-of-purchase-milking-capacity-purchase-price-availability-health-status-and-action-buttons-for-add-edit-delete-2-customer-management-table-listing-all-customers-with-name-phone-address-active-inactive-status-toggle-and-add-edit-delete-actions-3-orders-deliveries-table-of-all-orders-with-customer-name-cattle-tag-order-date-status-and-ability-to-update-delivery-status",
+      "title": "Build the Admin Panel frontend with a protected login screen (username/password). After login, provide navigation to three sections: (1) Cattle Management — table listing all cattle with tag number, breed, date of purchase, milking capacity, purchase price, availability, health status, and action buttons for add/edit/delete; (2) Customer Management — table listing all customers with name, phone, address, active/inactive status toggle, and add/edit/delete actions; (3) Orders & Deliveries — table of all orders with customer name, cattle tag, order date, status, and ability to update delivery status.",
       "reqIds": [
-        "REQ-4"
+        "REQ-5"
       ],
       "version": 1
     },
     {
-      "id": "feature-add-a-flagged-feedback-section-to-the-existing-admin-panel-accessible-only-when-logged-in-as-admin-display-a-list-of-all-flagged-customer-feedback-with-delivery-details-customer-message-and-a-button-to-update-the-delivery-status-after-investigation",
-      "title": "Add a 'Flagged Feedback' section to the existing admin panel (accessible only when logged in as admin). Display a list of all flagged customer feedback with delivery details, customer message, and a button to update the delivery status after investigation.",
+      "id": "feature-build-the-customer-portal-frontend-at-portal-with-a-username-password-login-form-after-successful-login-show-two-tabs-1-place-order-allows-the-customer-to-submit-a-new-order-by-selecting-available-cattle-shown-by-tag-number-and-breed-and-entering-delivery-notes-2-my-deliveries-lists-the-customer-s-own-orders-with-status-badges-pending-confirmed-out-for-delivery-delivered-cancelled-and-delivery-notes-block-access-entirely-for-inactive-or-non-existent-customer-accounts-and-show-a-clear-access-denied-message",
+      "title": "Build the Customer Portal frontend at /portal with a username/password login form. After successful login, show two tabs: (1) Place Order — allows the customer to submit a new order by selecting available cattle (shown by tag number and breed) and entering delivery notes; (2) My Deliveries — lists the customer's own orders with status badges (Pending, Confirmed, Out for Delivery, Delivered, Cancelled) and delivery notes. Block access entirely for inactive or non-existent customer accounts and show a clear 'Access denied' message.",
       "reqIds": [
-        "REQ-5"
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-consistent-visual-theme-across-both-the-admin-panel-and-customer-portal-use-a-clean-professional-green-and-white-color-palette-with-earthy-accent-tones-clear-typography-and-card-based-layouts-admin-panel-should-feel-authoritative-and-data-dense-customer-portal-should-feel-friendly-and-simple",
+      "title": "Apply a consistent visual theme across both the Admin Panel and Customer Portal: use a clean, professional green-and-white color palette with earthy accent tones, clear typography, and card-based layouts. Admin panel should feel authoritative and data-dense; customer portal should feel friendly and simple.",
+      "reqIds": [
+        "REQ-7"
       ],
       "version": 1
     }
@@ -32,43 +39,69 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Customer portal with Internet Identity login, full product catalog view, personal delivery history (completed & missed), and feedback form for incorrectly marked deliveries",
+      "summary": "Admin login with full cattle management (tag number, breed, date of purchase, milking capacity, purchase price, availability, health status) - add/edit/delete",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Admin panel with delivery management, status updates, flagged feedback dashboard, and manual status correction after investigation",
+      "summary": "Admin customer management - add/edit/delete accounts, set active/inactive status",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-3",
-      "summary": "Extend the backend actor to support customer-linked delivery records. Add a 'customerId' field (linked to Internet Identity principal) to existing delivery records so customers can query only their own deliveries.",
+      "summary": "Admin view and manage all orders and delivery statuses",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Customer portal login restricted to admin-created accounts only (no self-registration); inactive customers blocked",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Customer portal: place orders for cattle and view own delivery status",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Implement a backend data model and CRUD operations for Cattle records with the following fields: tagNumber (Text), breed (Text), dateOfPurchase (Int/timestamp), milkingCapacity (Float, litres/day), purchasePrice (Float), availability (variant: Available | Sold | Reserved), healthStatus (variant: Healthy | Sick | Recovered). Expose addCattle, updateCattle, deleteCattle, and getAllCattle functions. Only the admin principal can call mutating functions.",
       "reqIds": [
         "REQ-1"
       ],
       "status": "pending"
     },
     {
-      "id": "AR-4",
-      "summary": "Add a customer feedback system to the backend. Allow a customer to submit feedback on a delivery that is marked 'delivered' but was not received. Store feedback with fields: deliveryId, customerPrincipal, message, timestamp, and a 'flagged' boolean. Only customers can submit feedback; only admins can read all flagged feedback.",
+      "id": "AR-7",
+      "summary": "Implement a backend data model and CRUD operations for Customer accounts with fields: name (Text), phone (Text), address (Text), username (Text, unique login credential), passwordHash (Text), isActive (Bool). Expose addCustomer, updateCustomer, deleteCustomer, setCustomerActive, and getAllCustomers functions. Only the admin principal can call these functions.",
       "reqIds": [
         "REQ-2"
       ],
       "status": "pending"
     },
     {
-      "id": "AR-5",
-      "summary": "Add an admin function to resolve flagged feedback by updating the delivery status and marking the feedback as resolved. Only the admin principal can call this function.",
+      "id": "AR-8",
+      "summary": "Implement customer authentication backend logic: a customerLogin(username, password) function that checks credentials against stored customer accounts, returns a session token or error if the account does not exist or isActive is false. Inactive and non-existent customers must be explicitly rejected with a clear error variant.",
       "reqIds": [
         "REQ-3"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Implement backend Order management: Order record with fields orderId (Nat), customerId (Nat), cattleTagNumber (Text), orderDate (Int), status (variant: Pending | Confirmed | OutForDelivery | Delivered | Cancelled), deliveryNotes (Text). Expose placeOrder (customer-callable, only for own orders), updateOrderStatus (admin-callable), getAllOrders (admin-callable), getMyOrders (customer-callable, returns only the caller's orders).",
+      "reqIds": [
+        "REQ-4"
       ],
       "status": "pending"
     }
   ],
   "gameProjectType": "none",
-  "projectName": "Delivery Tracking App",
+  "projectName": "Cattle & Customer Management System",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

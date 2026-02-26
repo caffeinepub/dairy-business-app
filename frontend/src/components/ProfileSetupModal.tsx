@@ -9,7 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useSaveCallerUserProfile } from '../hooks/useQueries';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useActor } from '../hooks/useActor';
 import { toast } from 'sonner';
 import { User } from 'lucide-react';
 
@@ -19,7 +20,18 @@ interface ProfileSetupModalProps {
 
 export default function ProfileSetupModal({ open }: ProfileSetupModalProps) {
   const [name, setName] = useState('');
-  const saveProfile = useSaveCallerUserProfile();
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  const saveProfile = useMutation({
+    mutationFn: async (profile: { name: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.saveCallerUserProfile(profile);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

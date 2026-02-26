@@ -9,7 +9,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { InventoryItem } from '../lib/localTypes';
+
+// Local type definition since inventory is not backed by the canister
+export interface InventoryItem {
+  id: number;
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  lowStockThreshold: number;
+}
 
 interface InventoryFormAddProps {
   mode: 'add';

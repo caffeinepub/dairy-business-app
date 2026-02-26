@@ -1,95 +1,129 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Add customer portal with Internet Identity login, product catalog, delivery tracking, and feedback system",
+  "title": "Cattle & Customer Management System — Frontend Rebuild with Admin and Customer Portals",
   "requirements": [
     {
-      "id": "REQ-4",
-      "summary": "Create a customer-facing portal route with Internet Identity authentication, product catalog, delivery history, and feedback submission",
+      "id": "REQ-5",
+      "summary": "Build Admin Panel frontend with protected login, Cattle Management table with CRUD operations, Customer Management table with active/inactive toggle, and Orders & Deliveries table with status updates",
       "acceptanceCriteria": [
-        "Unauthenticated users are redirected to a login screen with Internet Identity button",
-        "Authenticated customers can view the full product catalog",
-        "Customers see a list of their own deliveries with status labels (Completed, Missed, Delivered)",
-        "A 'Report Issue' button appears on deliveries with status 'delivered'",
-        "Submitting the feedback form sends feedback to the backend and shows a success message"
+        "Admin login screen is shown to unauthenticated users navigating to /admin",
+        "Correct admin credentials grant access to the admin panel",
+        "Cattle table displays all fields and supports add/edit/delete via dialogs",
+        "Customer table supports add/edit/delete and active/inactive toggle",
+        "Orders table displays all orders and allows status updates",
+        "Admin is redirected to login on logout or session expiry"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/CustomerPortal.tsx",
+          "path": "frontend/src/pages/AdminPanel.tsx",
           "operation": "create",
-          "description": "Create the main customer portal page component at route /customer. Use the authorization component to require Internet Identity login and enforce #user role. Display a login prompt with Internet Identity button for unauthenticated users. Once authenticated, show a tabbed interface with three sections: (1) Product Catalog showing all available products, (2) My Deliveries listing the customer's own delivery records filtered by getMyDeliveries() with status badges, and (3) a feedback form accessible from deliveries marked 'delivered'. Verify the authorization component's usage instructions before implementing."
+          "description": "Create the main admin panel page component that uses the authorization component to enforce admin-only access. Use Internet Identity login as the authentication mechanism (admins are principals with the admin role assigned via the authorization component). After successful authentication and role verification, render a tabbed interface with three sections: Cattle Management, Customer Management, and Orders & Deliveries. Use shadcn/ui Tabs component for navigation between sections. Show a login prompt with Internet Identity integration for unauthenticated users. Verify the authorization component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/components/ProductCatalog.tsx",
+          "path": "frontend/src/components/AdminCattleManagement.tsx",
           "operation": "create",
-          "description": "Create a product catalog component that displays the farm's milk products and offerings. Show product cards with descriptions, quantities, and pricing information. Use a grid layout with shadcn/ui Card components for visual consistency. This is a read-only display for customers to browse available products."
+          "description": "Create a cattle management section component for the admin panel that calls getAllCattle() from the backend interface and displays a data table with columns: tagNumber, breed, dateOfPurchase (formatted timestamp), milkingCapacity (litres/day), purchasePrice, availability (Available/Sold/Reserved badge), healthStatus (Healthy/Sick/Recovered badge), and action buttons. Include 'Add Cattle' button that opens a dialog with a form for all seven cattle fields. Each row has Edit and Delete action buttons that call updateCattle() and deleteCattle() backend methods respectively. Use shadcn/ui Table, Dialog, Button, Badge, and Form components. Show loading and error states. Use TanStack Query hooks for data fetching and mutations."
         },
         {
-          "path": "frontend/src/components/CustomerDeliveryList.tsx",
+          "path": "frontend/src/components/AdminCustomerManagement.tsx",
           "operation": "create",
-          "description": "Create a delivery list component that fetches and displays the authenticated customer's personal delivery history using getMyDeliveries() from the backend interface. Show each delivery with date, quantity, delivery boy name, status (using Badge components with color coding: green for 'delivered', red for 'missed'), and notes. Include a 'Report Issue' button only on deliveries with status 'delivered' that opens the feedback dialog. Use shadcn/ui Table component for the list layout."
+          "description": "Create a customer management section component that calls getAllCustomers() from the backend interface and displays a table with columns: name, phone, address, isActive (toggle switch), and action buttons. Include 'Add Customer' button opening a dialog with fields for name, phone, address, username, password (with hash on submit), and isActive checkbox. Each row has Edit and Delete buttons calling updateCustomer() and deleteCustomer(). The isActive toggle calls setCustomerActive(customerId, newStatus). Use shadcn/ui Table, Dialog, Switch, Button, and Form components. Hash passwords client-side before sending to backend. Show appropriate loading and error states."
         },
         {
-          "path": "frontend/src/components/CustomerFeedbackDialog.tsx",
+          "path": "frontend/src/components/AdminOrdersDeliveries.tsx",
           "operation": "create",
-          "description": "Create a dialog component for submitting customer feedback on a delivered order. Accept deliveryId as a prop. Display the delivery details (date, quantity) and provide a textarea for the customer to describe the issue (e.g., order not received). On submit, call submitFeedback(deliveryId, message) from the backend interface. Show a success toast message after submission and close the dialog. Use shadcn/ui Dialog, Textarea, and Button components."
+          "description": "Create orders and deliveries section component that calls getAllOrders() from the backend interface and displays a table with columns: orderId, customer name (resolve from customerId by cross-referencing getAllCustomers()), cattleTagNumber, orderDate (formatted timestamp), status (Pending/Confirmed/OutForDelivery/Delivered/Cancelled badge), and deliveryNotes. Include an 'Update Status' button per row that opens a dialog allowing status change via dropdown and optional deliveryNotes update, calling updateOrderStatus(orderId, newStatus, notes). Use shadcn/ui Table, Dialog, Select, Textarea, Badge, and Button components. Show loading and error states."
         },
         {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Add React Query hooks for customer portal backend capabilities: useGetMyDeliveries() to fetch the authenticated customer's delivery records, useSubmitFeedback() mutation to submit feedback, and useGetFlaggedFeedback() to fetch all flagged feedback for admin use. Each hook should use the useActor hook to get the authenticated actor and handle loading/error states appropriately."
+          "path": "frontend/src/hooks/useAdminQueries.ts",
+          "operation": "create",
+          "description": "Create TanStack Query hooks for admin operations: useGetAllCattle (calls actor.getAllCattle), useAddCattle (mutation calling actor.addCattle), useUpdateCattle (mutation calling actor.updateCattle), useDeleteCattle (mutation calling actor.deleteCattle), useGetAllCustomers (calls actor.getAllCustomers), useAddCustomer (mutation calling actor.addCustomer with client-side password hashing), useUpdateCustomer (mutation calling actor.updateCustomer), useDeleteCustomer (mutation calling actor.deleteCustomer), useSetCustomerActive (mutation calling actor.setCustomerActive), useGetAllOrders (calls actor.getAllOrders), useUpdateOrderStatus (mutation calling actor.updateOrderStatus). Include proper query invalidation on mutations and toast notifications on success/error."
         },
         {
           "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Register the new /customer route in the TanStack Router configuration. Import and wire the CustomerPortal page component. Ensure the route is accessible in the router tree so authenticated customers can navigate to it."
+          "description": "Add a new route for /admin that renders the AdminPanel page component. Ensure the route is registered in the TanStack Router configuration alongside existing routes. Do not remove or modify existing routes (dashboard, cattle, milk, inventory, customers, deliveries, reports, /portal)."
         },
         {
           "path": "frontend/src/components/Layout.tsx",
           "operation": "modify",
-          "description": "Add a 'Customer Portal' navigation link in the header navigation that points to /customer route. Place it after the existing admin-focused links. The link should be visible to all users (authenticated and unauthenticated) so customers can discover the portal entry point."
-        },
-        {
-          "path": "frontend/src/components/ProfileSetupModal.tsx",
-          "operation": "create",
-          "description": "Create a modal component for first-time user profile setup following the authorization component's profile setup pattern. Display when isAuthenticated && !profileLoading && isFetched && userProfile === null. Prompt the user to enter their name, then call saveCallerUserProfile({ name }) from the backend interface. Use the custom useGetCallerUserProfile hook implementation pattern from the authorization component usage instructions to prevent modal flash. Use shadcn/ui Dialog, Input, and Button components."
-        },
-        {
-          "path": "frontend/src/pages/CustomerPortal.tsx",
-          "operation": "modify",
-          "description": "Integrate the ProfileSetupModal component into the CustomerPortal page. Show the modal when a newly authenticated user has no profile yet. After profile setup completes, proceed to show the main portal content (catalog, deliveries, feedback). Follow the authorization component's recommended pattern for preventing profile setup modal flash."
+          "description": "Add a navigation link to 'Admin Panel' (/admin) in both desktop and mobile navigation menus. Position it logically within the existing navigation structure. Do not remove existing links."
         }
       ]
     },
     {
-      "id": "REQ-5",
-      "summary": "Add a Flagged Feedback section to the admin panel for reviewing and resolving customer feedback",
+      "id": "REQ-6",
+      "summary": "Build Customer Portal frontend at /portal with username/password login, Place Order tab for selecting available cattle and submitting orders, and My Deliveries tab listing customer's own orders with status badges",
       "acceptanceCriteria": [
-        "Admin can see all flagged feedback in a dedicated dashboard section",
-        "Each feedback entry shows delivery ID, customer info, feedback message, and timestamp",
-        "Admin can select a new status and resolve the feedback via a form/dialog",
-        "Resolved feedback is removed from the flagged list or marked resolved visually"
+        "Customer login form is shown at /portal for unauthenticated users",
+        "Active, admin-created customers can log in with correct credentials",
+        "Inactive customers see an 'Access denied / account inactive' message after login attempt",
+        "Place Order tab shows available cattle and submits an order",
+        "My Deliveries tab shows only the logged-in customer's orders with current statuses",
+        "Customers cannot access cattle inventory details beyond tag number and breed for ordering"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/FlaggedFeedbackSection.tsx",
-          "operation": "create",
-          "description": "Create a section component that displays all flagged customer feedback for admin review. Use the authorization component's isCallerAdmin() guard to restrict access to admin users only. Fetch flagged feedback using getFlaggedFeedback() from the backend interface. Display each feedback entry in a shadcn/ui Card or Table row showing deliveryId, customerPrincipal (convert to string for display), message text, timestamp (formatted as readable date), and a 'Resolve' button. When resolve is clicked, open a dialog to confirm resolution. Verify the authorization component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/ResolveFeedbackDialog.tsx",
-          "operation": "create",
-          "description": "Create a dialog component for resolving flagged customer feedback. Accept feedbackId and delivery details as props. Display the feedback details (delivery ID, customer message, timestamp) for context. Provide a confirmation button that calls resolveFeedback(feedbackId) from the backend interface. On success, show a success toast message, invalidate the flagged feedback query to refresh the list, and close the dialog. Use shadcn/ui Dialog, Button, and Alert components."
-        },
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
+          "path": "frontend/src/pages/CustomerPortal.tsx",
           "operation": "modify",
-          "description": "Add the FlaggedFeedbackSection component to the admin dashboard page. Position it below the existing charts and alerts, in a new section titled 'Customer Feedback'. The section should only render when the current user is an admin (use isCallerAdmin check from the authorization component). This provides admins with quick access to customer issues from the main dashboard."
+          "description": "Replace the existing Internet Identity authentication flow with a custom username/password login form. When unauthenticated, display a login form with username and password fields that calls customerLogin(username, password) from the backend interface. On successful login (receiving a session token), store the token and customerId in React state or context. Handle LoginError variants explicitly: show 'Account not found' for AccountNotFound, 'Invalid credentials' for InvalidCredentials, and 'Access denied - your account is inactive' for AccountInactive. After successful login, render the existing tabbed interface (product catalog renamed to 'Place Order', delivery history renamed to 'My Deliveries'). Remove Internet Identity provider dependency from this page. Keep the ProfileSetupModal removed or hidden as it's not needed for username/password customers."
         },
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/components/CustomerPlaceOrder.tsx",
+          "operation": "create",
+          "description": "Create a Place Order tab component that fetches available cattle via getAllCattle() and filters for availability === 'Available'. Display cattle in a card grid or selectable list showing only tagNumber and breed (no other inventory details). Provide a form with a cattle selection dropdown, delivery notes textarea, and a 'Place Order' button. On submit, call placeOrder(customerId, selectedCattleTagNumber, deliveryNotes) where customerId comes from the logged-in session state. Show success toast on order placement and refresh the My Deliveries tab data. Use shadcn/ui Card, Select, Textarea, and Button components."
+        },
+        {
+          "path": "frontend/src/components/CustomerMyDeliveries.tsx",
+          "operation": "create",
+          "description": "Create a My Deliveries tab component that calls getMyOrders() from the backend interface (returns only the logged-in customer's orders). Display orders in a table or list with columns: orderId, cattleTagNumber, orderDate (formatted), status (badge with color coding: Pending=yellow, Confirmed=blue, OutForDelivery=purple, Delivered=green, Cancelled=red), and deliveryNotes. Use shadcn/ui Table and Badge components. Show loading and empty states appropriately."
+        },
+        {
+          "path": "frontend/src/hooks/useCustomerQueries.ts",
+          "operation": "create",
+          "description": "Create TanStack Query hooks for customer operations: useCustomerLogin (mutation calling actor.customerLogin, returning token and handling LoginError variants), useGetAvailableCattle (query calling actor.getAllCattle and filtering for Available status), usePlaceOrder (mutation calling actor.placeOrder with customerId, cattleTagNumber, deliveryNotes), useGetMyOrders (query calling actor.getMyOrders). Include proper error handling and toast notifications."
+        },
+        {
+          "path": "frontend/src/context/CustomerAuthContext.tsx",
+          "operation": "create",
+          "description": "Create a React context and provider to manage customer authentication state (isAuthenticated, customerId, sessionToken, username). Provide login and logout functions that wrap the useCustomerLogin mutation and manage session state. Store session data in memory (React state) and optionally sessionStorage for persistence across page reloads. Provide a useCustomerAuth hook for consuming components."
+        },
+        {
+          "path": "frontend/src/main.tsx",
           "operation": "modify",
-          "description": "Add useResolveFeedback() mutation hook that calls resolveFeedback(feedbackId) from the backend interface. After successful mutation, invalidate the 'flaggedFeedback' query key to refresh the admin's feedback list. Handle authorization errors gracefully and show appropriate error toasts."
+          "description": "Wrap the App component with the new CustomerAuthProvider to make customer authentication state available throughout the customer portal pages. Place it inside the existing QueryClientProvider and InternetIdentityProvider wrappers."
+        }
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "summary": "Apply a consistent green-and-white visual theme with earthy accents across Admin Panel and Customer Portal, ensuring the admin panel feels authoritative and data-dense while the customer portal feels friendly and simple",
+      "acceptanceCriteria": [
+        "Color palette is applied consistently across all pages",
+        "Admin panel and customer portal share a coherent but role-appropriate visual style",
+        "All tables, forms, and dialogs use the defined theme"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Update the existing CSS custom properties to define a green-and-white color palette with earthy accent tones. Replace or extend the current oklch-based color system to include primary green shades (e.g., --primary: 142 70% 45% for a professional green), white backgrounds, and earthy accents (browns, tans for secondary elements). Ensure both light and dark mode tokens are updated. Keep the existing Tailwind directives and font imports intact. The updated palette should support authoritative data-dense admin interfaces and friendly simple customer interfaces."
+        },
+        {
+          "path": "frontend/tailwind.config.js",
+          "operation": "modify",
+          "description": "Extend the Tailwind theme configuration to reference the updated CSS custom properties from index.css for the green-and-white palette. Add or update color aliases (e.g., 'admin-primary', 'customer-primary', 'earthy-accent') that map to the new green and earthy tones. Ensure existing chart, farm, and sidebar color palettes are preserved or adapted to the new theme. Do not remove existing plugins or font configurations."
+        },
+        {
+          "path": "frontend/src/pages/AdminPanel.tsx",
+          "operation": "modify",
+          "description": "Apply admin-specific styling using the defined green-and-white theme. Use darker, more authoritative shades for headers and navigation. Apply card-based layouts with generous padding and clear section dividers to convey a data-dense, professional feel. Use shadcn/ui components styled with the updated Tailwind classes referencing the new color palette."
+        },
+        {
+          "path": "frontend/src/pages/CustomerPortal.tsx",
+          "operation": "modify",
+          "description": "Apply customer-specific styling using softer, friendlier tones from the green-and-white palette. Use lighter green accents and larger, more approachable typography. Simplify the layout with clear calls-to-action and ample whitespace to create a welcoming, easy-to-navigate experience. Use shadcn/ui components styled with the updated Tailwind classes."
         }
       ]
     }

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createRouter, createRoute, createRootRoute, Outlet } from '@tanstack/react-router';
 import { Toaster } from '@/components/ui/sonner';
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import CattleManagement from './pages/CattleManagement';
@@ -10,6 +11,7 @@ import CustomerManagement from './pages/CustomerManagement';
 import DeliveryReports from './pages/DeliveryReports';
 import MonthlyReports from './pages/MonthlyReports';
 import CustomerPortal from './pages/CustomerPortal';
+import AdminPanel from './pages/AdminPanel';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,70 +23,81 @@ const queryClient = new QueryClient({
 });
 
 const rootRoute = createRootRoute({
-  component: () => (
-    <Layout>
-      <Outlet />
-    </Layout>
-  ),
+  component: () => <Outlet />,
 });
 
-const indexRoute = createRoute({
+const layoutRoute = createRoute({
   getParentRoute: () => rootRoute,
+  id: 'layout',
+  component: Layout,
+});
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => layoutRoute,
   path: '/',
   component: Dashboard,
 });
 
 const cattleRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => layoutRoute,
   path: '/cattle',
   component: CattleManagement,
 });
 
 const milkRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => layoutRoute,
   path: '/milk',
   component: MilkProduction,
 });
 
 const inventoryRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => layoutRoute,
   path: '/inventory',
   component: InventoryManagement,
 });
 
 const customersRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => layoutRoute,
   path: '/customers',
   component: CustomerManagement,
 });
 
 const deliveriesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => layoutRoute,
   path: '/deliveries',
   component: DeliveryReports,
 });
 
 const reportsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => layoutRoute,
   path: '/reports',
   component: MonthlyReports,
 });
 
-const customerPortalRoute = createRoute({
+const portalRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/portal',
   component: CustomerPortal,
 });
 
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  component: AdminPanel,
+});
+
 const routeTree = rootRoute.addChildren([
-  indexRoute,
-  cattleRoute,
-  milkRoute,
-  inventoryRoute,
-  customersRoute,
-  deliveriesRoute,
-  reportsRoute,
-  customerPortalRoute,
+  layoutRoute.addChildren([
+    dashboardRoute,
+    cattleRoute,
+    milkRoute,
+    inventoryRoute,
+    customersRoute,
+    deliveriesRoute,
+    reportsRoute,
+  ]),
+  portalRoute,
+  adminRoute,
 ]);
 
 const router = createRouter({ routeTree });
@@ -98,8 +111,10 @@ declare module '@tanstack/react-router' {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <Toaster richColors position="top-right" />
+      <CustomerAuthProvider>
+        <RouterProvider router={router} />
+        <Toaster richColors position="top-right" />
+      </CustomerAuthProvider>
     </QueryClientProvider>
   );
 }

@@ -1,108 +1,153 @@
 {
   "kind": "build_request",
-  "title": "Add customer portal with Internet Identity login, product catalog, delivery tracking, and feedback system",
-  "projectName": "AO Farms Delivery Tracker",
-  "priority": "normal",
+  "title": "Cattle & Customer Management System — Full Rebuild with Admin and Customer Portals",
+  "projectName": "Cattle Manager",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Extend the backend actor to support customer-linked delivery records. Add a 'customerId' field (linked to Internet Identity principal) to existing delivery records so customers can query only their own deliveries.",
+      "text": "Implement a backend data model and CRUD operations for Cattle records with the following fields: tagNumber (Text), breed (Text), dateOfPurchase (Int/timestamp), milkingCapacity (Float, litres/day), purchasePrice (Float), availability (variant: Available | Sold | Reserved), healthStatus (variant: Healthy | Sick | Recovered). Expose addCattle, updateCattle, deleteCattle, and getAllCattle functions. Only the admin principal can call mutating functions.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-8"
+          "msg-8",
+          "msg-10",
+          "msg-14"
         ]
       },
       "acceptanceCriteria": [
-        "A delivery record can store a customer principal ID",
-        "A query function returns only deliveries belonging to the calling customer principal",
-        "Existing admin delivery functions remain unchanged"
+        "Admin can add a cattle record with all seven required fields",
+        "Admin can edit any field of an existing cattle record",
+        "Admin can delete a cattle record by ID",
+        "All cattle records are returned via getAllCattle",
+        "Non-admin callers receive an authorization error on mutating calls"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Add a customer feedback system to the backend. Allow a customer to submit feedback on a delivery that is marked 'delivered' but was not received. Store feedback with fields: deliveryId, customerPrincipal, message, timestamp, and a 'flagged' boolean. Only customers can submit feedback; only admins can read all flagged feedback.",
+      "text": "Implement a backend data model and CRUD operations for Customer accounts with fields: name (Text), phone (Text), address (Text), username (Text, unique login credential), passwordHash (Text), isActive (Bool). Expose addCustomer, updateCustomer, deleteCustomer, setCustomerActive, and getAllCustomers functions. Only the admin principal can call these functions.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-8"
+          "msg-8",
+          "msg-12",
+          "msg-14"
         ]
       },
       "acceptanceCriteria": [
-        "submitFeedback(deliveryId, message) callable by authenticated customer principal",
-        "Feedback is stored with flagged=true and timestamp",
-        "getFlaggedFeedback() returns all flagged feedback, accessible only to admin principal",
-        "Customers cannot update delivery status directly"
+        "Admin can add a new customer with all required fields",
+        "Admin can edit customer details",
+        "Admin can delete a customer account",
+        "Admin can toggle a customer's isActive status",
+        "getAllCustomers returns all customer records to the admin"
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Add an admin function to resolve flagged feedback by updating the delivery status and marking the feedback as resolved. Only the admin principal can call this function.",
+      "text": "Implement customer authentication backend logic: a customerLogin(username, password) function that checks credentials against stored customer accounts, returns a session token or error if the account does not exist or isActive is false. Inactive and non-existent customers must be explicitly rejected with a clear error variant.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-8"
+          "msg-12",
+          "msg-14"
         ]
       },
       "acceptanceCriteria": [
-        "resolveFeedback(feedbackId, newDeliveryStatus) is callable only by admin",
-        "Delivery status is updated to the new value",
-        "Feedback record is marked resolved",
-        "Non-admin callers receive an error"
+        "customerLogin succeeds for admin-created, active customers with correct credentials",
+        "customerLogin returns an error for unknown usernames",
+        "customerLogin returns an error for inactive customers even if credentials are correct",
+        "customerLogin returns an error for incorrect passwords"
       ]
     },
     {
       "id": "REQ-4",
-      "text": "Create a customer-facing portal as a separate route (/customer) in the React app. The portal must require Internet Identity login. Once logged in, customers see: (1) a full product catalog page, (2) their personal delivery history listing completed and missed deliveries, and (3) a feedback form on any delivery marked 'delivered'.",
-      "target": "frontend",
+      "text": "Implement backend Order management: Order record with fields orderId (Nat), customerId (Nat), cattleTagNumber (Text), orderDate (Int), status (variant: Pending | Confirmed | OutForDelivery | Delivered | Cancelled), deliveryNotes (Text). Expose placeOrder (customer-callable, only for own orders), updateOrderStatus (admin-callable), getAllOrders (admin-callable), getMyOrders (customer-callable, returns only the caller's orders).",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-8"
+          "msg-10",
+          "msg-14"
         ]
       },
       "acceptanceCriteria": [
-        "Unauthenticated users are redirected to a login screen with Internet Identity button",
-        "Authenticated customers can view the full product catalog",
-        "Customers see a list of their own deliveries with status labels (Completed, Missed, Delivered)",
-        "A 'Report Issue' button appears on deliveries with status 'delivered'",
-        "Submitting the feedback form sends feedback to the backend and shows a success message"
+        "Authenticated active customers can place orders",
+        "Admin can view all orders",
+        "Admin can update order status through all status variants",
+        "Customers can only view their own orders via getMyOrders",
+        "Order records persist across canister upgrades"
       ]
     },
     {
       "id": "REQ-5",
-      "text": "Add a 'Flagged Feedback' section to the existing admin panel (accessible only when logged in as admin). Display a list of all flagged customer feedback with delivery details, customer message, and a button to update the delivery status after investigation.",
+      "text": "Build the Admin Panel frontend with a protected login screen (username/password). After login, provide navigation to three sections: (1) Cattle Management — table listing all cattle with tag number, breed, date of purchase, milking capacity, purchase price, availability, health status, and action buttons for add/edit/delete; (2) Customer Management — table listing all customers with name, phone, address, active/inactive status toggle, and add/edit/delete actions; (3) Orders & Deliveries — table of all orders with customer name, cattle tag, order date, status, and ability to update delivery status.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-8"
+          "msg-8",
+          "msg-10",
+          "msg-14"
         ]
       },
       "acceptanceCriteria": [
-        "Admin can see all flagged feedback in a dedicated dashboard section",
-        "Each feedback entry shows delivery ID, customer info, feedback message, and timestamp",
-        "Admin can select a new status and resolve the feedback via a form/dialog",
-        "Resolved feedback is removed from the flagged list or marked resolved visually"
+        "Admin login screen is shown to unauthenticated users navigating to /admin",
+        "Correct admin credentials grant access to the admin panel",
+        "Cattle table displays all fields and supports add/edit/delete via dialogs",
+        "Customer table supports add/edit/delete and active/inactive toggle",
+        "Orders table displays all orders and allows status updates",
+        "Admin is redirected to login on logout or session expiry"
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "text": "Build the Customer Portal frontend at /portal with a username/password login form. After successful login, show two tabs: (1) Place Order — allows the customer to submit a new order by selecting available cattle (shown by tag number and breed) and entering delivery notes; (2) My Deliveries — lists the customer's own orders with status badges (Pending, Confirmed, Out for Delivery, Delivered, Cancelled) and delivery notes. Block access entirely for inactive or non-existent customer accounts and show a clear 'Access denied' message.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-10",
+          "msg-12",
+          "msg-14"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Customer login form is shown at /portal for unauthenticated users",
+        "Active, admin-created customers can log in with correct credentials",
+        "Inactive customers see an 'Access denied / account inactive' message after login attempt",
+        "Place Order tab shows available cattle and submits an order",
+        "My Deliveries tab shows only the logged-in customer's orders with current statuses",
+        "Customers cannot access cattle inventory details beyond tag number and breed for ordering"
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "text": "Apply a consistent visual theme across both the Admin Panel and Customer Portal: use a clean, professional green-and-white color palette with earthy accent tones, clear typography, and card-based layouts. Admin panel should feel authoritative and data-dense; customer portal should feel friendly and simple.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-14"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Color palette is applied consistently across all pages",
+        "Admin panel and customer portal share a coherent but role-appropriate visual style",
+        "All tables, forms, and dialogs use the defined theme"
       ]
     }
   ],
   "constraints": [
-    "Only admins can update delivery statuses",
-    "Customers can submit feedback only — no direct status changes",
-    "Customer portal must use Internet Identity for authentication",
-    "All backend logic must remain in a single Motoko actor (backend/main.mo)",
-    "Do not modify files in frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui"
+    "All Motoko logic must remain in a single main actor (backend/main.mo)",
+    "Do not use Internet Identity for customer authentication — use username/password stored in the canister",
+    "Customers must not be able to self-register; only admin-created accounts are valid",
+    "Inactive customers must be blocked from all customer portal access",
+    "Immutable frontend paths (hooks, main.tsx, ui components) must not be modified"
   ],
   "nonGoals": [
-    "SMS or OTP-based customer login",
-    "Mobile number + password authentication",
-    "Customers editing or deleting delivery records",
-    "Real-time notifications or push alerts",
-    "Customer registration flow beyond Internet Identity"
+    "Social login or Internet Identity for customers",
+    "Customers browsing the full cattle inventory",
+    "Self-registration by customers",
+    "Inventory management (feed, medicine, supplies)",
+    "Milk production tracking",
+    "WhatsApp messaging integration",
+    "Monthly reports or CSV export features"
   ],
   "imageRequirements": {
     "required": [],
