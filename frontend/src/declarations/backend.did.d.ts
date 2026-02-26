@@ -13,7 +13,6 @@ import type { Principal } from '@icp-sdk/core/principal';
 export interface Cattle {
   'id' : bigint,
   'purchasePrice' : number,
-  'milkingCapacity' : number,
   'dateOfPurchase' : bigint,
   'healthStatus' : HealthStatus,
   'availability' : CattleAvailability,
@@ -43,12 +42,35 @@ export interface CustomerAccount {
 export type HealthStatus = { 'Healthy' : null } |
   { 'Sick' : null } |
   { 'Recovered' : null };
-export type LoginError = { 'AccessDenied' : null } |
-  { 'AccountNotFound' : null } |
-  { 'InvalidCredentials' : null } |
-  { 'AccountInactive' : null };
-export type LoginResult = { 'ok' : string } |
-  { 'err' : LoginError };
+export interface InventoryItem {
+  'id' : bigint,
+  'lowStockThreshold' : number,
+  'name' : string,
+  'unit' : string,
+  'addedBy' : Principal,
+  'notes' : string,
+  'quantity' : number,
+  'category' : string,
+}
+export interface InventoryStat {
+  'uniqueCattleCount' : bigint,
+  'avgDailyProduction' : number,
+  'totalRecords' : bigint,
+  'totalQuantity' : number,
+}
+export interface InventoryStats {
+  'categoryCount' : bigint,
+  'lowStockItems' : bigint,
+  'totalItems' : bigint,
+}
+export interface MilkProductionRecord {
+  'id' : bigint,
+  'date' : bigint,
+  'quantityLiters' : number,
+  'addedBy' : Principal,
+  'notes' : string,
+  'cattleTag' : string,
+}
 export type OrderStatus = { 'Delivered' : null } |
   { 'Confirmed' : null } |
   { 'Cancelled' : null } |
@@ -61,45 +83,58 @@ export type UserRole = { 'admin' : null } |
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addCattle' : ActorMethod<
-    [string, string, bigint, number, number, CattleAvailability, HealthStatus],
-    bigint
+    [string, string, bigint, number, CattleAvailability, HealthStatus],
+    undefined
   >,
   'addCustomer' : ActorMethod<
     [string, string, string, string, string, boolean],
-    bigint
+    undefined
   >,
-  'adminLogin' : ActorMethod<[], LoginResult>,
+  'addInventoryItem' : ActorMethod<
+    [string, string, number, string, number, string],
+    undefined
+  >,
+  'addMilkProductionRecord' : ActorMethod<
+    [string, number, bigint, string],
+    undefined
+  >,
+  'adminLogin' : ActorMethod<[string, string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'customerLogin' : ActorMethod<[string, string], LoginResult>,
   'deleteCattle' : ActorMethod<[bigint], undefined>,
   'deleteCustomer' : ActorMethod<[bigint], undefined>,
+  'deleteInventoryItem' : ActorMethod<[bigint], undefined>,
+  'deleteMilkProductionRecord' : ActorMethod<[bigint], undefined>,
   'getAllCattle' : ActorMethod<[], Array<Cattle>>,
   'getAllCustomers' : ActorMethod<[], Array<CustomerAccount>>,
+  'getAllInventoryItems' : ActorMethod<[], Array<InventoryItem>>,
+  'getAllMilkProductionRecords' : ActorMethod<[], Array<MilkProductionRecord>>,
   'getAllOrders' : ActorMethod<[], Array<CattleOrder>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getInventoryStats' : ActorMethod<[], InventoryStats>,
+  'getLowStockItems' : ActorMethod<[], Array<InventoryItem>>,
+  'getMilkProductionStats' : ActorMethod<[], InventoryStat>,
   'getMyOrders' : ActorMethod<[], Array<CattleOrder>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'linkCustomerPrincipal' : ActorMethod<[bigint, Principal], undefined>,
-  'placeOrder' : ActorMethod<[bigint, string, string], bigint>,
+  'placeOrder' : ActorMethod<[bigint, string, string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'setCustomerActive' : ActorMethod<[bigint, boolean], undefined>,
   'updateCattle' : ActorMethod<
-    [
-      bigint,
-      string,
-      string,
-      bigint,
-      number,
-      number,
-      CattleAvailability,
-      HealthStatus,
-    ],
+    [bigint, string, string, bigint, number, CattleAvailability, HealthStatus],
     undefined
   >,
   'updateCustomer' : ActorMethod<
     [bigint, string, string, string, string, string, boolean],
+    undefined
+  >,
+  'updateInventoryItem' : ActorMethod<
+    [bigint, string, string, number, string, number, string],
+    undefined
+  >,
+  'updateMilkProductionRecord' : ActorMethod<
+    [bigint, string, number, bigint, string],
     undefined
   >,
   'updateOrderStatus' : ActorMethod<[bigint, OrderStatus, string], undefined>,

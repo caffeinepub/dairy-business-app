@@ -2,11 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-create-a-dedicated-landing-login-selection-page-that-presents-two-clearly-labeled-entry-points-admin-login-and-customer-login-allowing-users-to-choose-their-portal-before-proceeding",
-      "featureTitle": "Create a dedicated landing/login selection page that presents two clearly labeled entry points: 'Admin Login' and 'Customer Login', allowing users to choose their portal before proceeding.",
+      "featureId": "feature-implement-a-top-navigation-bar-with-the-ao-farms-logo-green-cow-head-icon-a-o-farms-text-on-the-left-and-navigation-links-dashboard-cattle-milk-production-inventory-customers-deliveries-the-active-link-should-use-a-filled-dark-green-pill-button-style-navigation-should-route-to-existing-app-routes",
+      "featureTitle": "Implement a top navigation bar with the AO Farms logo (green cow head icon + 'A.O. Farms' text) on the left, and navigation links: Dashboard, Cattle, Milk Production, Inventory, Customers, Deliveries. The active link should use a filled dark-green pill/button style. Navigation should route to existing app routes.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/pages/LoginSelection.tsx"
+        "frontend/src/components/Layout.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -22,12 +21,10 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-restore-the-working-admin-login-flow-from-version-28-the-admin-login-page-must-use-internet-identity-authentication-verify-admin-role-via-the-backend-actor-and-redirect-to-the-admin-dashboard-on-success-display-a-clear-error-if-the-authenticated-principal-is-not-an-admin",
-      "featureTitle": "Restore the working admin login flow from Version 28: the Admin login page must use Internet Identity authentication, verify admin role via the backend actor, and redirect to the admin dashboard on success. Display a clear error if the authenticated principal is not an admin.",
+      "featureId": "feature-add-a-full-width-hero-banner-below-the-nav-bar-on-the-dashboard-page-showing-an-illustrated-farm-landscape-barn-trees-mountains-sunrise-sky-with-the-text-welcome-to-ao-farms-and-subtitle-here-s-your-dairy-farm-overview-for-today-overlaid-on-the-left-side-of-the-image",
+      "featureTitle": "Add a full-width hero banner below the nav bar on the Dashboard page showing an illustrated farm landscape (barn, trees, mountains, sunrise sky) with the text 'Welcome to AO Farms' and subtitle 'Here's your dairy farm overview for today' overlaid on the left side of the image.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/pages/AdminLogin.tsx",
-        "frontend/src/pages/AdminPanel.tsx"
+        "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -43,12 +40,10 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-create-a-dedicated-customer-login-page-where-customers-authenticate-using-their-username-and-password-credentials-managed-in-the-backend-customeraccount-store-on-success-store-the-customer-session-and-redirect-to-the-customer-portal",
-      "featureTitle": "Create a dedicated Customer Login page where customers authenticate using their username and password credentials managed in the backend CustomerAccount store. On success, store the customer session and redirect to the Customer Portal.",
+      "featureId": "feature-display-6-summary-stat-cards-on-the-dashboard-in-a-single-row-1-total-cattle-count-active-count-subtext-2-today-s-milk-total-litres-3-inventory-items-total-tracked-items-4-low-stock-items-below-threshold-of-10-5-today-s-deliveries-logged-today-6-missed-deliveries-not-delivered-today-each-card-has-a-label-numeric-value-subtext-and-a-small-icon-cards-use-a-light-beige-cream-background-with-green-icon-accents",
+      "featureTitle": "Display 6 summary stat cards on the Dashboard in a single row: (1) Total Cattle — count + active count subtext, (2) Today's Milk — total litres, (3) Inventory Items — total tracked items, (4) Low Stock — items below threshold of 10, (5) Today's Deliveries — logged today, (6) Missed Deliveries — not delivered today. Each card has a label, numeric value, subtext, and a small icon. Cards use a light beige/cream background with green icon accents.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/pages/CustomerLogin.tsx",
-        "frontend/src/pages/CustomerPortal.tsx"
+        "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -64,11 +59,10 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-update-the-app-routing-so-that-the-root-path-renders-the-new-login-selection-page-protect-the-admin-panel-routes-to-redirect-unauthenticated-or-non-admin-users-back-to-the-admin-login-page-protect-the-customer-portal-route-to-redirect-unauthenticated-customers-back-to-the-customer-login-page",
-      "featureTitle": "Update the app routing so that the root path ('/') renders the new login selection page. Protect the admin panel routes to redirect unauthenticated or non-admin users back to the admin login page. Protect the customer portal route to redirect unauthenticated customers back to the customer login page.",
+      "featureId": "feature-add-a-7-day-milk-production-line-area-chart-on-the-dashboard-left-panel-showing-daily-milk-totals-for-the-last-7-days-using-existing-milkproductiontrendchart-component-or-equivalent-recharts-line-chart",
+      "featureTitle": "Add a '7-Day Milk Production' line/area chart on the Dashboard (left panel) showing daily milk totals for the last 7 days using existing MilkProductionTrendChart component or equivalent Recharts line chart.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/components/Layout.tsx"
+        "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -80,6 +74,46 @@
       ],
       "testIds": [
         "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-recent-milk-entries-panel-on-the-dashboard-right-panel-listing-the-most-recent-milk-production-log-entries-with-cattle-tag-date-and-volume-show-an-empty-state-if-no-records-exist",
+      "featureTitle": "Add a 'Recent Milk Entries' panel on the Dashboard (right panel) listing the most recent milk production log entries with cattle tag, date, and volume. Show an empty state if no records exist.",
+      "files": [
+        "frontend/src/pages/Dashboard.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-apply-a-consistent-farm-themed-visual-style-across-all-pages-beige-cream-f5f0e8-or-similar-page-background-dark-green-1a5c2a-or-similar-primary-color-for-nav-buttons-and-accents-warm-white-card-backgrounds-earthy-tones-for-text-use-the-existing-css-custom-properties-in-frontend-src-index-css-where-possible",
+      "featureTitle": "Apply a consistent farm-themed visual style across all pages: beige/cream (#f5f0e8 or similar) page background, dark green (#1a5c2a or similar) primary color for nav, buttons, and accents, warm white card backgrounds, earthy tones for text. Use the existing CSS custom properties in frontend/src/index.css where possible.",
+      "files": [
+        "frontend/src/components/Layout.tsx",
+        "frontend/src/index.css",
+        "frontend/tailwind.config.js"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-6"
       ],
       "confidence": "high"
     }

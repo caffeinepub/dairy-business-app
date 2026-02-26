@@ -89,10 +89,33 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface InventoryStat {
+    uniqueCattleCount: bigint;
+    avgDailyProduction: number;
+    totalRecords: bigint;
+    totalQuantity: number;
+}
+export interface InventoryItem {
+    id: bigint;
+    lowStockThreshold: number;
+    name: string;
+    unit: string;
+    addedBy: Principal;
+    notes: string;
+    quantity: number;
+    category: string;
+}
+export interface CattleOrder {
+    status: OrderStatus;
+    deliveryNotes: string;
+    orderDate: bigint;
+    orderId: bigint;
+    cattleTagNumber: string;
+    customerId: bigint;
+}
 export interface Cattle {
     id: bigint;
     purchasePrice: number;
-    milkingCapacity: number;
     dateOfPurchase: bigint;
     healthStatus: HealthStatus;
     availability: CattleAvailability;
@@ -108,23 +131,21 @@ export interface CustomerAccount {
     passwordHash: string;
     phone: string;
 }
-export type LoginResult = {
-    __kind__: "ok";
-    ok: string;
-} | {
-    __kind__: "err";
-    err: LoginError;
-};
-export interface CattleOrder {
-    status: OrderStatus;
-    deliveryNotes: string;
-    orderDate: bigint;
-    orderId: bigint;
-    cattleTagNumber: string;
-    customerId: bigint;
+export interface InventoryStats {
+    categoryCount: bigint;
+    lowStockItems: bigint;
+    totalItems: bigint;
 }
 export interface UserProfile {
     name: string;
+}
+export interface MilkProductionRecord {
+    id: bigint;
+    date: bigint;
+    quantityLiters: number;
+    addedBy: Principal;
+    notes: string;
+    cattleTag: string;
 }
 export enum CattleAvailability {
     Available = "Available",
@@ -135,12 +156,6 @@ export enum HealthStatus {
     Healthy = "Healthy",
     Sick = "Sick",
     Recovered = "Recovered"
-}
-export enum LoginError {
-    AccessDenied = "AccessDenied",
-    AccountNotFound = "AccountNotFound",
-    InvalidCredentials = "InvalidCredentials",
-    AccountInactive = "AccountInactive"
 }
 export enum OrderStatus {
     Delivered = "Delivered",
@@ -156,30 +171,40 @@ export enum UserRole {
 }
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
-    addCattle(tagNumber: string, breed: string, dateOfPurchase: bigint, milkingCapacity: number, purchasePrice: number, availability: CattleAvailability, healthStatus: HealthStatus): Promise<bigint>;
-    addCustomer(name: string, phone: string, address: string, username: string, passwordHash: string, isActive: boolean): Promise<bigint>;
-    adminLogin(): Promise<LoginResult>;
+    addCattle(tagNumber: string, breed: string, dateOfPurchase: bigint, purchasePrice: number, availability: CattleAvailability, healthStatus: HealthStatus): Promise<void>;
+    addCustomer(name: string, phone: string, address: string, username: string, passwordHash: string, isActive: boolean): Promise<void>;
+    addInventoryItem(name: string, category: string, quantity: number, unit: string, lowStockThreshold: number, notes: string): Promise<void>;
+    addMilkProductionRecord(cattleTag: string, quantityLiters: number, date: bigint, notes: string): Promise<void>;
+    adminLogin(adminToken: string, userProvidedToken: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    customerLogin(username: string, password: string): Promise<LoginResult>;
     deleteCattle(cattleId: bigint): Promise<void>;
     deleteCustomer(customerId: bigint): Promise<void>;
+    deleteInventoryItem(itemId: bigint): Promise<void>;
+    deleteMilkProductionRecord(recordId: bigint): Promise<void>;
     getAllCattle(): Promise<Array<Cattle>>;
     getAllCustomers(): Promise<Array<CustomerAccount>>;
+    getAllInventoryItems(): Promise<Array<InventoryItem>>;
+    getAllMilkProductionRecords(): Promise<Array<MilkProductionRecord>>;
     getAllOrders(): Promise<Array<CattleOrder>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getInventoryStats(): Promise<InventoryStats>;
+    getLowStockItems(): Promise<Array<InventoryItem>>;
+    getMilkProductionStats(): Promise<InventoryStat>;
     getMyOrders(): Promise<Array<CattleOrder>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     linkCustomerPrincipal(customerId: bigint, customerPrincipal: Principal): Promise<void>;
-    placeOrder(customerId: bigint, cattleTagNumber: string, deliveryNotes: string): Promise<bigint>;
+    placeOrder(customerId: bigint, cattleTagNumber: string, deliveryNotes: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setCustomerActive(customerId: bigint, isActive: boolean): Promise<void>;
-    updateCattle(cattleId: bigint, tagNumber: string, breed: string, dateOfPurchase: bigint, milkingCapacity: number, purchasePrice: number, availability: CattleAvailability, healthStatus: HealthStatus): Promise<void>;
+    updateCattle(cattleId: bigint, tagNumber: string, breed: string, dateOfPurchase: bigint, purchasePrice: number, availability: CattleAvailability, healthStatus: HealthStatus): Promise<void>;
     updateCustomer(customerId: bigint, name: string, phone: string, address: string, username: string, passwordHash: string, isActive: boolean): Promise<void>;
+    updateInventoryItem(itemId: bigint, name: string, category: string, quantity: number, unit: string, lowStockThreshold: number, notes: string): Promise<void>;
+    updateMilkProductionRecord(recordId: bigint, cattleTag: string, quantityLiters: number, date: bigint, notes: string): Promise<void>;
     updateOrderStatus(orderId: bigint, status: OrderStatus, deliveryNotes: string): Promise<void>;
 }
-import type { Cattle as _Cattle, CattleAvailability as _CattleAvailability, CattleOrder as _CattleOrder, HealthStatus as _HealthStatus, LoginError as _LoginError, LoginResult as _LoginResult, OrderStatus as _OrderStatus, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { Cattle as _Cattle, CattleAvailability as _CattleAvailability, CattleOrder as _CattleOrder, HealthStatus as _HealthStatus, OrderStatus as _OrderStatus, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
@@ -196,21 +221,21 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async addCattle(arg0: string, arg1: string, arg2: bigint, arg3: number, arg4: number, arg5: CattleAvailability, arg6: HealthStatus): Promise<bigint> {
+    async addCattle(arg0: string, arg1: string, arg2: bigint, arg3: number, arg4: CattleAvailability, arg5: HealthStatus): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.addCattle(arg0, arg1, arg2, arg3, arg4, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg5), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg6));
+                const result = await this.actor.addCattle(arg0, arg1, arg2, arg3, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg4), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg5));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addCattle(arg0, arg1, arg2, arg3, arg4, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg5), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg6));
+            const result = await this.actor.addCattle(arg0, arg1, arg2, arg3, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg4), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg5));
             return result;
         }
     }
-    async addCustomer(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: boolean): Promise<bigint> {
+    async addCustomer(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: boolean): Promise<void> {
         if (this.processError) {
             try {
                 const result = await this.actor.addCustomer(arg0, arg1, arg2, arg3, arg4, arg5);
@@ -224,46 +249,60 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async adminLogin(): Promise<LoginResult> {
+    async addInventoryItem(arg0: string, arg1: string, arg2: number, arg3: string, arg4: number, arg5: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.adminLogin();
-                return from_candid_LoginResult_n5(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.adminLogin();
-            return from_candid_LoginResult_n5(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n9(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.addInventoryItem(arg0, arg1, arg2, arg3, arg4, arg5);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n9(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.addInventoryItem(arg0, arg1, arg2, arg3, arg4, arg5);
             return result;
         }
     }
-    async customerLogin(arg0: string, arg1: string): Promise<LoginResult> {
+    async addMilkProductionRecord(arg0: string, arg1: number, arg2: bigint, arg3: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.customerLogin(arg0, arg1);
-                return from_candid_LoginResult_n5(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.addMilkProductionRecord(arg0, arg1, arg2, arg3);
+                return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.customerLogin(arg0, arg1);
-            return from_candid_LoginResult_n5(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.addMilkProductionRecord(arg0, arg1, arg2, arg3);
+            return result;
+        }
+    }
+    async adminLogin(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.adminLogin(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.adminLogin(arg0, arg1);
+            return result;
+        }
+    }
+    async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n5(this._uploadFile, this._downloadFile, arg1));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n5(this._uploadFile, this._downloadFile, arg1));
+            return result;
         }
     }
     async deleteCattle(arg0: bigint): Promise<void> {
@@ -294,18 +333,46 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async deleteInventoryItem(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteInventoryItem(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteInventoryItem(arg0);
+            return result;
+        }
+    }
+    async deleteMilkProductionRecord(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteMilkProductionRecord(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteMilkProductionRecord(arg0);
+            return result;
+        }
+    }
     async getAllCattle(): Promise<Array<Cattle>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAllCattle();
-                return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n7(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAllCattle();
-            return from_candid_vec_n11(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n7(this._uploadFile, this._downloadFile, result);
         }
     }
     async getAllCustomers(): Promise<Array<CustomerAccount>> {
@@ -322,74 +389,144 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getAllInventoryItems(): Promise<Array<InventoryItem>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllInventoryItems();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllInventoryItems();
+            return result;
+        }
+    }
+    async getAllMilkProductionRecords(): Promise<Array<MilkProductionRecord>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllMilkProductionRecords();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllMilkProductionRecords();
+            return result;
+        }
+    }
     async getAllOrders(): Promise<Array<CattleOrder>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAllOrders();
-                return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAllOrders();
-            return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
-                return from_candid_opt_n23(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n19(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserProfile();
-            return from_candid_opt_n23(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n19(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n24(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n20(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n24(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n20(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getInventoryStats(): Promise<InventoryStats> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getInventoryStats();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getInventoryStats();
+            return result;
+        }
+    }
+    async getLowStockItems(): Promise<Array<InventoryItem>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getLowStockItems();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getLowStockItems();
+            return result;
+        }
+    }
+    async getMilkProductionStats(): Promise<InventoryStat> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMilkProductionStats();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMilkProductionStats();
+            return result;
         }
     }
     async getMyOrders(): Promise<Array<CattleOrder>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getMyOrders();
-                return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
+                return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getMyOrders();
-            return from_candid_vec_n18(this._uploadFile, this._downloadFile, result);
+            return from_candid_vec_n14(this._uploadFile, this._downloadFile, result);
         }
     }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n23(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n19(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n23(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n19(this._uploadFile, this._downloadFile, result);
         }
     }
     async isCallerAdmin(): Promise<boolean> {
@@ -420,7 +557,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async placeOrder(arg0: bigint, arg1: string, arg2: string): Promise<bigint> {
+    async placeOrder(arg0: bigint, arg1: string, arg2: string): Promise<void> {
         if (this.processError) {
             try {
                 const result = await this.actor.placeOrder(arg0, arg1, arg2);
@@ -462,17 +599,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async updateCattle(arg0: bigint, arg1: string, arg2: string, arg3: bigint, arg4: number, arg5: number, arg6: CattleAvailability, arg7: HealthStatus): Promise<void> {
+    async updateCattle(arg0: bigint, arg1: string, arg2: string, arg3: bigint, arg4: number, arg5: CattleAvailability, arg6: HealthStatus): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateCattle(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg6), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg7));
+                const result = await this.actor.updateCattle(arg0, arg1, arg2, arg3, arg4, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg5), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg6));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateCattle(arg0, arg1, arg2, arg3, arg4, arg5, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg6), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg7));
+            const result = await this.actor.updateCattle(arg0, arg1, arg2, arg3, arg4, to_candid_CattleAvailability_n1(this._uploadFile, this._downloadFile, arg5), to_candid_HealthStatus_n3(this._uploadFile, this._downloadFile, arg6));
             return result;
         }
     }
@@ -490,79 +627,71 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async updateOrderStatus(arg0: bigint, arg1: OrderStatus, arg2: string): Promise<void> {
+    async updateInventoryItem(arg0: bigint, arg1: string, arg2: string, arg3: number, arg4: string, arg5: number, arg6: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n26(this._uploadFile, this._downloadFile, arg1), arg2);
+                const result = await this.actor.updateInventoryItem(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n26(this._uploadFile, this._downloadFile, arg1), arg2);
+            const result = await this.actor.updateInventoryItem(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+            return result;
+        }
+    }
+    async updateMilkProductionRecord(arg0: bigint, arg1: string, arg2: number, arg3: bigint, arg4: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateMilkProductionRecord(arg0, arg1, arg2, arg3, arg4);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateMilkProductionRecord(arg0, arg1, arg2, arg3, arg4);
+            return result;
+        }
+    }
+    async updateOrderStatus(arg0: bigint, arg1: OrderStatus, arg2: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n22(this._uploadFile, this._downloadFile, arg1), arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateOrderStatus(arg0, to_candid_OrderStatus_n22(this._uploadFile, this._downloadFile, arg1), arg2);
             return result;
         }
     }
 }
-function from_candid_CattleAvailability_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CattleAvailability): CattleAvailability {
-    return from_candid_variant_n17(_uploadFile, _downloadFile, value);
+function from_candid_CattleAvailability_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CattleAvailability): CattleAvailability {
+    return from_candid_variant_n13(_uploadFile, _downloadFile, value);
 }
-function from_candid_CattleOrder_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CattleOrder): CattleOrder {
-    return from_candid_record_n20(_uploadFile, _downloadFile, value);
+function from_candid_CattleOrder_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CattleOrder): CattleOrder {
+    return from_candid_record_n16(_uploadFile, _downloadFile, value);
 }
-function from_candid_Cattle_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Cattle): Cattle {
-    return from_candid_record_n13(_uploadFile, _downloadFile, value);
+function from_candid_Cattle_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Cattle): Cattle {
+    return from_candid_record_n9(_uploadFile, _downloadFile, value);
 }
-function from_candid_HealthStatus_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _HealthStatus): HealthStatus {
-    return from_candid_variant_n15(_uploadFile, _downloadFile, value);
+function from_candid_HealthStatus_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _HealthStatus): HealthStatus {
+    return from_candid_variant_n11(_uploadFile, _downloadFile, value);
 }
-function from_candid_LoginError_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _LoginError): LoginError {
-    return from_candid_variant_n8(_uploadFile, _downloadFile, value);
+function from_candid_OrderStatus_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _OrderStatus): OrderStatus {
+    return from_candid_variant_n18(_uploadFile, _downloadFile, value);
 }
-function from_candid_LoginResult_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _LoginResult): LoginResult {
-    return from_candid_variant_n6(_uploadFile, _downloadFile, value);
+function from_candid_UserRole_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n21(_uploadFile, _downloadFile, value);
 }
-function from_candid_OrderStatus_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _OrderStatus): OrderStatus {
-    return from_candid_variant_n22(_uploadFile, _downloadFile, value);
-}
-function from_candid_UserRole_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n25(_uploadFile, _downloadFile, value);
-}
-function from_candid_opt_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+function from_candid_opt_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_record_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: bigint;
-    purchasePrice: number;
-    milkingCapacity: number;
-    dateOfPurchase: bigint;
-    healthStatus: _HealthStatus;
-    availability: _CattleAvailability;
-    breed: string;
-    tagNumber: string;
-}): {
-    id: bigint;
-    purchasePrice: number;
-    milkingCapacity: number;
-    dateOfPurchase: bigint;
-    healthStatus: HealthStatus;
-    availability: CattleAvailability;
-    breed: string;
-    tagNumber: string;
-} {
-    return {
-        id: value.id,
-        purchasePrice: value.purchasePrice,
-        milkingCapacity: value.milkingCapacity,
-        dateOfPurchase: value.dateOfPurchase,
-        healthStatus: from_candid_HealthStatus_n14(_uploadFile, _downloadFile, value.healthStatus),
-        availability: from_candid_CattleAvailability_n16(_uploadFile, _downloadFile, value.availability),
-        breed: value.breed,
-        tagNumber: value.tagNumber
-    };
-}
-function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     status: _OrderStatus;
     deliveryNotes: string;
     orderDate: bigint;
@@ -578,7 +707,7 @@ function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promise<Uin
     customerId: bigint;
 } {
     return {
-        status: from_candid_OrderStatus_n21(_uploadFile, _downloadFile, value.status),
+        status: from_candid_OrderStatus_n17(_uploadFile, _downloadFile, value.status),
         deliveryNotes: value.deliveryNotes,
         orderDate: value.orderDate,
         orderId: value.orderId,
@@ -586,7 +715,34 @@ function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promise<Uin
         customerId: value.customerId
     };
 }
-function from_candid_variant_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    id: bigint;
+    purchasePrice: number;
+    dateOfPurchase: bigint;
+    healthStatus: _HealthStatus;
+    availability: _CattleAvailability;
+    breed: string;
+    tagNumber: string;
+}): {
+    id: bigint;
+    purchasePrice: number;
+    dateOfPurchase: bigint;
+    healthStatus: HealthStatus;
+    availability: CattleAvailability;
+    breed: string;
+    tagNumber: string;
+} {
+    return {
+        id: value.id,
+        purchasePrice: value.purchasePrice,
+        dateOfPurchase: value.dateOfPurchase,
+        healthStatus: from_candid_HealthStatus_n10(_uploadFile, _downloadFile, value.healthStatus),
+        availability: from_candid_CattleAvailability_n12(_uploadFile, _downloadFile, value.availability),
+        breed: value.breed,
+        tagNumber: value.tagNumber
+    };
+}
+function from_candid_variant_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     Healthy: null;
 } | {
     Sick: null;
@@ -595,7 +751,7 @@ function from_candid_variant_n15(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): HealthStatus {
     return "Healthy" in value ? HealthStatus.Healthy : "Sick" in value ? HealthStatus.Sick : "Recovered" in value ? HealthStatus.Recovered : value;
 }
-function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     Available: null;
 } | {
     Reserved: null;
@@ -604,7 +760,7 @@ function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): CattleAvailability {
     return "Available" in value ? CattleAvailability.Available : "Reserved" in value ? CattleAvailability.Reserved : "Sold" in value ? CattleAvailability.Sold : value;
 }
-function from_candid_variant_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     Delivered: null;
 } | {
     Confirmed: null;
@@ -617,7 +773,7 @@ function from_candid_variant_n22(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): OrderStatus {
     return "Delivered" in value ? OrderStatus.Delivered : "Confirmed" in value ? OrderStatus.Confirmed : "Cancelled" in value ? OrderStatus.Cancelled : "OutForDelivery" in value ? OrderStatus.OutForDelivery : "Pending" in value ? OrderStatus.Pending : value;
 }
-function from_candid_variant_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -626,41 +782,11 @@ function from_candid_variant_n25(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-function from_candid_variant_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    ok: string;
-} | {
-    err: _LoginError;
-}): {
-    __kind__: "ok";
-    ok: string;
-} | {
-    __kind__: "err";
-    err: LoginError;
-} {
-    return "ok" in value ? {
-        __kind__: "ok",
-        ok: value.ok
-    } : "err" in value ? {
-        __kind__: "err",
-        err: from_candid_LoginError_n7(_uploadFile, _downloadFile, value.err)
-    } : value;
+function from_candid_vec_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_CattleOrder>): Array<CattleOrder> {
+    return value.map((x)=>from_candid_CattleOrder_n15(_uploadFile, _downloadFile, x));
 }
-function from_candid_variant_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    AccessDenied: null;
-} | {
-    AccountNotFound: null;
-} | {
-    InvalidCredentials: null;
-} | {
-    AccountInactive: null;
-}): LoginError {
-    return "AccessDenied" in value ? LoginError.AccessDenied : "AccountNotFound" in value ? LoginError.AccountNotFound : "InvalidCredentials" in value ? LoginError.InvalidCredentials : "AccountInactive" in value ? LoginError.AccountInactive : value;
-}
-function from_candid_vec_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Cattle>): Array<Cattle> {
-    return value.map((x)=>from_candid_Cattle_n12(_uploadFile, _downloadFile, x));
-}
-function from_candid_vec_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_CattleOrder>): Array<CattleOrder> {
-    return value.map((x)=>from_candid_CattleOrder_n19(_uploadFile, _downloadFile, x));
+function from_candid_vec_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Cattle>): Array<Cattle> {
+    return value.map((x)=>from_candid_Cattle_n8(_uploadFile, _downloadFile, x));
 }
 function to_candid_CattleAvailability_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CattleAvailability): _CattleAvailability {
     return to_candid_variant_n2(_uploadFile, _downloadFile, value);
@@ -668,26 +794,11 @@ function to_candid_CattleAvailability_n1(_uploadFile: (file: ExternalBlob) => Pr
 function to_candid_HealthStatus_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: HealthStatus): _HealthStatus {
     return to_candid_variant_n4(_uploadFile, _downloadFile, value);
 }
-function to_candid_OrderStatus_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): _OrderStatus {
-    return to_candid_variant_n27(_uploadFile, _downloadFile, value);
+function to_candid_OrderStatus_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): _OrderStatus {
+    return to_candid_variant_n23(_uploadFile, _downloadFile, value);
 }
-function to_candid_UserRole_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
-    return to_candid_variant_n10(_uploadFile, _downloadFile, value);
-}
-function to_candid_variant_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
-    admin: null;
-} | {
-    user: null;
-} | {
-    guest: null;
-} {
-    return value == UserRole.admin ? {
-        admin: null
-    } : value == UserRole.user ? {
-        user: null
-    } : value == UserRole.guest ? {
-        guest: null
-    } : value;
+function to_candid_UserRole_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
+    return to_candid_variant_n6(_uploadFile, _downloadFile, value);
 }
 function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: CattleAvailability): {
     Available: null;
@@ -704,7 +815,7 @@ function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         Sold: null
     } : value;
 }
-function to_candid_variant_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): {
+function to_candid_variant_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: OrderStatus): {
     Delivered: null;
 } | {
     Confirmed: null;
@@ -740,6 +851,21 @@ function to_candid_variant_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         Sick: null
     } : value == HealthStatus.Recovered ? {
         Recovered: null
+    } : value;
+}
+function to_candid_variant_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
+    admin: null;
+} | {
+    user: null;
+} | {
+    guest: null;
+} {
+    return value == UserRole.admin ? {
+        admin: null
+    } : value == UserRole.user ? {
+        user: null
+    } : value == UserRole.guest ? {
+        guest: null
     } : value;
 }
 export interface CreateActorOptions {

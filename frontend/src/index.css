@@ -6,25 +6,25 @@
 
 @layer base {
   :root {
-    /* Green & White palette with earthy accents */
-    --background: oklch(0.98 0.005 120);
-    --foreground: oklch(0.18 0.02 140);
+    /* Farm-themed palette: beige/cream background, dark green primary */
+    --background: oklch(0.97 0.012 85);
+    --foreground: oklch(0.20 0.03 140);
 
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.18 0.02 140);
+    --card-foreground: oklch(0.20 0.03 140);
 
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.18 0.02 140);
+    --popover-foreground: oklch(0.20 0.03 140);
 
-    /* Primary: Professional green */
-    --primary: oklch(0.48 0.15 145);
+    /* Primary: Dark forest green */
+    --primary: oklch(0.38 0.12 145);
     --primary-foreground: oklch(0.98 0.005 120);
 
     /* Secondary: Earthy tan */
     --secondary: oklch(0.92 0.03 80);
     --secondary-foreground: oklch(0.28 0.04 80);
 
-    --muted: oklch(0.95 0.01 120);
+    --muted: oklch(0.94 0.015 90);
     --muted-foreground: oklch(0.52 0.02 140);
 
     /* Accent: Warm earthy brown */
@@ -34,33 +34,39 @@
     --destructive: oklch(0.55 0.22 25);
     --destructive-foreground: oklch(0.98 0.005 25);
 
-    --border: oklch(0.88 0.01 140);
-    --input: oklch(0.88 0.01 140);
-    --ring: oklch(0.48 0.15 145);
+    --border: oklch(0.88 0.02 90);
+    --input: oklch(0.88 0.02 90);
+    --ring: oklch(0.38 0.12 145);
 
     --radius: 0.5rem;
 
     /* Admin-specific tokens */
-    --admin-dark: oklch(0.22 0.04 145);
+    --admin-dark: oklch(0.22 0.06 145);
     --admin-bg: oklch(0.96 0.01 120);
     --customer-bg: oklch(0.97 0.01 130);
 
+    /* Farm-specific tokens */
+    --farm-primary: oklch(0.32 0.10 145);
+    --farm-bg: oklch(0.96 0.015 85);
+    --farm-text: oklch(0.22 0.04 140);
+    --farm-border: oklch(0.88 0.02 90);
+
     /* Chart colors */
-    --chart-1: oklch(0.48 0.15 145);
+    --chart-1: oklch(0.38 0.12 145);
     --chart-2: oklch(0.62 0.12 160);
     --chart-3: oklch(0.72 0.10 80);
     --chart-4: oklch(0.58 0.14 200);
     --chart-5: oklch(0.65 0.18 30);
 
     /* Sidebar */
-    --sidebar-background: oklch(0.22 0.04 145);
+    --sidebar-background: oklch(0.22 0.06 145);
     --sidebar-foreground: oklch(0.95 0.01 120);
-    --sidebar-primary: oklch(0.48 0.15 145);
+    --sidebar-primary: oklch(0.38 0.12 145);
     --sidebar-primary-foreground: oklch(0.98 0.005 120);
     --sidebar-accent: oklch(0.30 0.05 145);
     --sidebar-accent-foreground: oklch(0.95 0.01 120);
     --sidebar-border: oklch(0.30 0.04 145);
-    --sidebar-ring: oklch(0.48 0.15 145);
+    --sidebar-ring: oklch(0.38 0.12 145);
   }
 
   .dark {
@@ -73,7 +79,7 @@
     --popover: oklch(0.18 0.02 145);
     --popover-foreground: oklch(0.94 0.01 120);
 
-    --primary: oklch(0.58 0.16 145);
+    --primary: oklch(0.52 0.14 145);
     --primary-foreground: oklch(0.12 0.02 145);
 
     --secondary: oklch(0.24 0.03 80);
@@ -90,11 +96,16 @@
 
     --border: oklch(0.28 0.03 145);
     --input: oklch(0.28 0.03 145);
-    --ring: oklch(0.58 0.16 145);
+    --ring: oklch(0.52 0.14 145);
 
     --admin-dark: oklch(0.14 0.03 145);
     --admin-bg: oklch(0.16 0.02 145);
     --customer-bg: oklch(0.15 0.02 130);
+
+    --farm-primary: oklch(0.52 0.14 145);
+    --farm-bg: oklch(0.14 0.02 145);
+    --farm-text: oklch(0.94 0.01 120);
+    --farm-border: oklch(0.28 0.03 145);
 
     --chart-1: oklch(0.58 0.16 145);
     --chart-2: oklch(0.68 0.13 160);
@@ -104,12 +115,12 @@
 
     --sidebar-background: oklch(0.14 0.03 145);
     --sidebar-foreground: oklch(0.94 0.01 120);
-    --sidebar-primary: oklch(0.58 0.16 145);
+    --sidebar-primary: oklch(0.52 0.14 145);
     --sidebar-primary-foreground: oklch(0.12 0.02 145);
     --sidebar-accent: oklch(0.22 0.04 145);
     --sidebar-accent-foreground: oklch(0.94 0.01 120);
-    --sidebar-border: oklch(0.24 0.03 145);
-    --sidebar-ring: oklch(0.58 0.16 145);
+    --sidebar-border: oklch(0.28 0.04 145);
+    --sidebar-ring: oklch(0.52 0.14 145);
   }
 }
 
@@ -118,25 +129,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
-  }
-}
-
-@media print {
-  .print\:hidden {
-    display: none !important;
-  }
-  body {
-    background: white !important;
-    color: black !important;
-  }
-  table {
-    border-collapse: collapse;
-  }
-  td, th {
-    border: 1px solid #ccc;
-  }
-  @page {
-    margin: 1cm;
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }

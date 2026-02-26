@@ -1,161 +1,116 @@
-import React from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { useIsCallerAdmin } from '../hooks/useAdminQueries';
+import { useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useActor } from '../hooks/useActor';
+import { Loader2, LogOut, LayoutDashboard, Beef, Users, Truck, BarChart3 } from 'lucide-react';
 import AdminCattleManagement from '../components/AdminCattleManagement';
 import AdminCustomerManagement from '../components/AdminCustomerManagement';
 import AdminOrdersDeliveries from '../components/AdminOrdersDeliveries';
-import { Loader2, LogOut, ShieldCheck, Beef, Users, Package } from 'lucide-react';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { clear, identity } = useInternetIdentity();
-  const { actor, isFetching: actorFetching } = useActor();
-  const qc = useQueryClient();
-  const isAuthenticated = !!identity;
+  const { data: isAdmin, isLoading: adminCheckLoading } = useIsCallerAdmin();
 
-  const { data: isAdmin, isLoading: adminLoading } = useQuery({
-    queryKey: ['isAdmin'],
-    queryFn: async () => {
-      if (!actor) return false;
-      return actor.isCallerAdmin();
-    },
-    enabled: !!actor && !actorFetching && isAuthenticated,
-  });
+  useEffect(() => {
+    if (!adminCheckLoading && isAdmin === false) {
+      navigate({ to: '/admin-login' });
+    }
+  }, [isAdmin, adminCheckLoading, navigate]);
 
   const handleLogout = async () => {
     await clear();
-    qc.clear();
+    queryClient.clear();
     navigate({ to: '/admin-login' });
   };
 
-  const isChecking = actorFetching || adminLoading;
-
-  // Not authenticated — redirect to admin login
-  if (!isAuthenticated) {
-    navigate({ to: '/admin-login' });
-    return null;
-  }
-
-  // Checking admin status
-  if (isChecking) {
+  if (adminCheckLoading) {
     return (
-      <div className="min-h-screen bg-admin-bg flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p>Verifying admin access...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  // Not admin
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-admin-bg flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-xl">
-          <CardContent className="pt-8 pb-8 px-8 flex flex-col items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
-              <ShieldCheck className="h-8 w-8 text-destructive" />
-            </div>
-            <div className="text-center">
-              <h2 className="text-xl font-bold text-destructive">Access Denied</h2>
-              <p className="text-muted-foreground text-sm mt-2">
-                Your account does not have admin privileges. Please contact the system administrator.
-              </p>
-            </div>
-            <Button variant="outline" onClick={handleLogout} className="gap-2">
-              <LogOut className="h-4 w-4" /> Sign Out
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-admin-bg">
-      {/* Admin Header */}
-      <header className="bg-admin-dark text-white shadow-lg sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/assets/generated/ao-farms-logo.dim_320x160.png" alt="AO Farms" className="h-8 object-contain brightness-0 invert" />
-            <div className="hidden sm:block">
-              <span className="font-bold text-lg">Admin Panel</span>
-              <span className="text-white/60 text-sm ml-2">Management System</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 bg-white/10 rounded-full px-3 py-1">
-              <ShieldCheck className="h-4 w-4 text-green-300" />
-              <span className="text-sm text-white/90">Admin</span>
-            </div>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold font-display text-foreground">Admin Panel</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your dairy business operations
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate({ to: '/dashboard' })}
+          >
+            <LayoutDashboard className="h-4 w-4 mr-2" />
+            Dashboard
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="cattle">
+        <TabsList className="mb-6 flex flex-wrap gap-1 h-auto">
+          <TabsTrigger value="cattle" className="flex items-center gap-2">
+            <Beef className="h-4 w-4" />
+            Cattle
+          </TabsTrigger>
+          <TabsTrigger value="customers" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Customers
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="flex items-center gap-2">
+            <Truck className="h-4 w-4" />
+            Orders & Deliveries
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Reports
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cattle">
+          <AdminCattleManagement />
+        </TabsContent>
+
+        <TabsContent value="customers">
+          <AdminCustomerManagement />
+        </TabsContent>
+
+        <TabsContent value="orders">
+          <AdminOrdersDeliveries />
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <div className="text-center py-12 text-muted-foreground">
+            <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p>View detailed reports in the Monthly Reports page</p>
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-white hover:bg-white/10 gap-2"
+              variant="link"
+              onClick={() => navigate({ to: '/reports' })}
+              className="mt-2"
             >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Sign Out</span>
+              Go to Monthly Reports →
             </Button>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-admin-dark">Dashboard</h1>
-          <p className="text-muted-foreground">Manage your cattle, customers, and orders from one place.</p>
-        </div>
-
-        <Tabs defaultValue="cattle" className="space-y-6">
-          <TabsList className="bg-white border border-border shadow-sm h-12 p-1 gap-1">
-            <TabsTrigger value="cattle" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Beef className="h-4 w-4" />
-              <span className="hidden sm:inline">Cattle</span>
-            </TabsTrigger>
-            <TabsTrigger value="customers" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Customers</span>
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Package className="h-4 w-4" />
-              <span className="hidden sm:inline">Orders & Deliveries</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="cattle">
-            <div className="bg-white rounded-xl border border-border shadow-sm p-6">
-              <AdminCattleManagement />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="customers">
-            <div className="bg-white rounded-xl border border-border shadow-sm p-6">
-              <AdminCustomerManagement />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="orders">
-            <div className="bg-white rounded-xl border border-border shadow-sm p-6">
-              <AdminOrdersDeliveries />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border mt-12 py-6 text-center text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} AO Farms. Built with ❤️ using{' '}
-          <a href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">caffeine.ai</a>
-        </p>
-      </footer>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

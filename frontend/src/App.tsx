@@ -1,26 +1,27 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createRouter, createRoute, createRootRoute, Outlet } from '@tanstack/react-router';
 import { Toaster } from '@/components/ui/sonner';
-import { CustomerAuthProvider } from './context/CustomerAuthContext';
+import { ThemeProvider } from 'next-themes';
 import Layout from './components/Layout';
 import LoginSelection from './pages/LoginSelection';
 import AdminLogin from './pages/AdminLogin';
 import CustomerLogin from './pages/CustomerLogin';
+import AdminPanel from './pages/AdminPanel';
+import CustomerPortal from './pages/CustomerPortal';
 import Dashboard from './pages/Dashboard';
 import CattleManagement from './pages/CattleManagement';
-import MilkProduction from './pages/MilkProduction';
-import InventoryManagement from './pages/InventoryManagement';
 import CustomerManagement from './pages/CustomerManagement';
 import DeliveryReports from './pages/DeliveryReports';
 import MonthlyReports from './pages/MonthlyReports';
-import CustomerPortal from './pages/CustomerPortal';
-import AdminPanel from './pages/AdminPanel';
+import MilkProduction from './pages/MilkProduction';
+import InventoryManagement from './pages/InventoryManagement';
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 30_000,
+      staleTime: 30000,
     },
   },
 });
@@ -29,8 +30,13 @@ const rootRoute = createRootRoute({
   component: () => <Outlet />,
 });
 
-// Public standalone routes (no layout)
-const loginSelectionRoute = createRoute({
+const layoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'layout',
+  component: Layout,
+});
+
+const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: LoginSelection,
@@ -48,23 +54,16 @@ const customerLoginRoute = createRoute({
   component: CustomerLogin,
 });
 
-const portalRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/portal',
-  component: CustomerPortal,
-});
-
-const adminRoute = createRoute({
-  getParentRoute: () => rootRoute,
+const adminPanelRoute = createRoute({
+  getParentRoute: () => layoutRoute,
   path: '/admin',
   component: AdminPanel,
 });
 
-// Admin layout routes
-const layoutRoute = createRoute({
+const customerPortalRoute = createRoute({
   getParentRoute: () => rootRoute,
-  id: 'layout',
-  component: Layout,
+  path: '/portal',
+  component: CustomerPortal,
 });
 
 const dashboardRoute = createRoute({
@@ -73,56 +72,56 @@ const dashboardRoute = createRoute({
   component: Dashboard,
 });
 
-const cattleRoute = createRoute({
+const cattleManagementRoute = createRoute({
   getParentRoute: () => layoutRoute,
   path: '/cattle',
   component: CattleManagement,
 });
 
-const milkRoute = createRoute({
+const milkProductionRoute = createRoute({
   getParentRoute: () => layoutRoute,
   path: '/milk',
   component: MilkProduction,
 });
 
-const inventoryRoute = createRoute({
+const inventoryManagementRoute = createRoute({
   getParentRoute: () => layoutRoute,
   path: '/inventory',
   component: InventoryManagement,
 });
 
-const customersRoute = createRoute({
+const customerManagementRoute = createRoute({
   getParentRoute: () => layoutRoute,
   path: '/customers',
   component: CustomerManagement,
 });
 
-const deliveriesRoute = createRoute({
+const deliveryReportsRoute = createRoute({
   getParentRoute: () => layoutRoute,
   path: '/deliveries',
   component: DeliveryReports,
 });
 
-const reportsRoute = createRoute({
+const monthlyReportsRoute = createRoute({
   getParentRoute: () => layoutRoute,
   path: '/reports',
   component: MonthlyReports,
 });
 
 const routeTree = rootRoute.addChildren([
-  loginSelectionRoute,
+  indexRoute,
   adminLoginRoute,
   customerLoginRoute,
-  portalRoute,
-  adminRoute,
+  customerPortalRoute,
   layoutRoute.addChildren([
+    adminPanelRoute,
     dashboardRoute,
-    cattleRoute,
-    milkRoute,
-    inventoryRoute,
-    customersRoute,
-    deliveriesRoute,
-    reportsRoute,
+    cattleManagementRoute,
+    milkProductionRoute,
+    inventoryManagementRoute,
+    customerManagementRoute,
+    deliveryReportsRoute,
+    monthlyReportsRoute,
   ]),
 ]);
 
@@ -136,11 +135,13 @@ declare module '@tanstack/react-router' {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <CustomerAuthProvider>
-        <RouterProvider router={router} />
-        <Toaster richColors position="top-right" />
-      </CustomerAuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <QueryClientProvider client={queryClient}>
+        <CustomerAuthProvider>
+          <RouterProvider router={router} />
+          <Toaster richColors position="top-right" />
+        </CustomerAuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

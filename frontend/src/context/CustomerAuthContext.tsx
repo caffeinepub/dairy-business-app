@@ -9,52 +9,62 @@ interface CustomerSession {
 
 interface CustomerAuthContextType {
   session: CustomerSession | null;
-  isAuthenticated: boolean;
   login: (session: CustomerSession) => void;
   logout: () => void;
+  isAuthenticated: boolean;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextType | null>(null);
 
-const SESSION_KEY = 'customer_session';
+const SESSION_KEY = 'dairy_customer_session';
+
+function serializeSession(session: CustomerSession): string {
+  return JSON.stringify({
+    ...session,
+    customerId: session.customerId.toString(),
+  });
+}
+
+function deserializeSession(data: string): CustomerSession | null {
+  try {
+    const parsed = JSON.parse(data);
+    return {
+      ...parsed,
+      customerId: BigInt(parsed.customerId),
+    };
+  } catch {
+    return null;
+  }
+}
 
 export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<CustomerSession | null>(() => {
-    try {
-      const stored = sessionStorage.getItem(SESSION_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return { ...parsed, customerId: BigInt(parsed.customerId) };
-      }
-    } catch {
-      // ignore
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (stored) {
+      return deserializeSession(stored);
     }
     return null;
   });
 
   const login = (newSession: CustomerSession) => {
     setSession(newSession);
-    try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        ...newSession,
-        customerId: newSession.customerId.toString(),
-      }));
-    } catch {
-      // ignore
-    }
+    sessionStorage.setItem(SESSION_KEY, serializeSession(newSession));
   };
 
   const logout = () => {
     setSession(null);
-    try {
-      sessionStorage.removeItem(SESSION_KEY);
-    } catch {
-      // ignore
-    }
+    sessionStorage.removeItem(SESSION_KEY);
   };
 
   return (
-    <CustomerAuthContext.Provider value={{ session, isAuthenticated: !!session, login, logout }}>
+    <CustomerAuthContext.Provider
+      value={{
+        session,
+        login,
+        logout,
+        isAuthenticated: session !== null,
+      }}
+    >
       {children}
     </CustomerAuthContext.Provider>
   );
@@ -62,6 +72,8 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
 
 export function useCustomerAuth() {
   const ctx = useContext(CustomerAuthContext);
-  if (!ctx) throw new Error('useCustomerAuth must be used within CustomerAuthProvider');
+  if (!ctx) {
+    throw new Error('useCustomerAuth must be used within CustomerAuthProvider');
+  }
   return ctx;
 }

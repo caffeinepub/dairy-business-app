@@ -1,153 +1,200 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useGetAllOrders, useGetAllCustomers, useUpdateOrderStatus } from '../hooks/useAdminQueries';
+import { CattleOrder, OrderStatus, CustomerAccount } from '../backend';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw } from 'lucide-react';
-import { useGetAllOrders, useUpdateOrderStatus, useGetAllCustomers } from '../hooks/useAdminQueries';
-import { OrderStatus, type CattleOrder } from '../backend';
+import { Label } from '@/components/ui/label';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Truck, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
 
-function statusBadge(s: OrderStatus) {
-  const map: Record<OrderStatus, { label: string; className: string }> = {
-    [OrderStatus.Pending]: { label: 'Pending', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-    [OrderStatus.Confirmed]: { label: 'Confirmed', className: 'bg-blue-100 text-blue-800 border-blue-200' },
-    [OrderStatus.OutForDelivery]: { label: 'Out for Delivery', className: 'bg-purple-100 text-purple-800 border-purple-200' },
-    [OrderStatus.Delivered]: { label: 'Delivered', className: 'bg-green-100 text-green-800 border-green-200' },
-    [OrderStatus.Cancelled]: { label: 'Cancelled', className: 'bg-red-100 text-red-800 border-red-200' },
+function getStatusBadge(status: OrderStatus) {
+  const classes: Record<string, string> = {
+    [OrderStatus.Pending]: 'bg-yellow-100 text-yellow-800',
+    [OrderStatus.Confirmed]: 'bg-blue-100 text-blue-800',
+    [OrderStatus.OutForDelivery]: 'bg-purple-100 text-purple-800',
+    [OrderStatus.Delivered]: 'bg-green-100 text-green-800',
+    [OrderStatus.Cancelled]: 'bg-red-100 text-red-800',
   };
-  const { label, className } = map[s] || { label: String(s), className: '' };
-  return <Badge className={className}>{label}</Badge>;
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${classes[status] ?? 'bg-gray-100 text-gray-800'}`}>
+      {status}
+    </span>
+  );
 }
 
 export default function AdminOrdersDeliveries() {
   const { data: orders = [], isLoading: ordersLoading } = useGetAllOrders();
   const { data: customers = [] } = useGetAllCustomers();
-  const updateStatus = useUpdateOrderStatus();
+  const updateMutation = useUpdateOrderStatus();
 
-  const [updateDialog, setUpdateDialog] = useState<CattleOrder | null>(null);
+  const [editingOrder, setEditingOrder] = useState<CattleOrder | null>(null);
   const [newStatus, setNewStatus] = useState<OrderStatus>(OrderStatus.Pending);
   const [notes, setNotes] = useState('');
 
-  const customerMap = new Map(customers.map(c => [c.id.toString(), c.name]));
+  const customerMap = new Map<string, CustomerAccount>(
+    customers.map((c) => [c.id.toString(), c]),
+  );
 
-  const openUpdate = (order: CattleOrder) => {
-    setUpdateDialog(order);
+  const handleEdit = (order: CattleOrder) => {
+    setEditingOrder(order);
     setNewStatus(order.status);
     setNotes(order.deliveryNotes);
   };
 
   const handleUpdate = async () => {
-    if (!updateDialog) return;
-    await updateStatus.mutateAsync({ orderId: updateDialog.orderId, status: newStatus, deliveryNotes: notes });
-    setUpdateDialog(null);
+    if (!editingOrder) return;
+    try {
+      await updateMutation.mutateAsync({
+        orderId: editingOrder.orderId,
+        status: newStatus,
+        deliveryNotes: notes,
+      });
+      toast.success('Order status updated');
+      setEditingOrder(null);
+    } catch {
+      toast.error('Failed to update order');
+    }
   };
 
+  const sortedOrders = [...orders].sort(
+    (a, b) => Number(b.orderDate) - Number(a.orderDate),
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-admin-dark">Orders & Deliveries</h2>
-          <p className="text-sm text-muted-foreground">{orders.length} orders total</p>
-        </div>
-      </div>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-display flex items-center gap-2">
+            <Truck className="h-5 w-5 text-primary" />
+            All Orders & Deliveries
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {ordersLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : sortedOrders.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Truck className="h-10 w-10 mx-auto mb-2 opacity-30" />
+              <p>No orders yet</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Cattle Tag</TableHead>
+                    <TableHead>Order Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedOrders.map((order) => {
+                    const customer = customerMap.get(order.customerId.toString());
+                    return (
+                      <TableRow key={order.orderId.toString()}>
+                        <TableCell className="font-mono text-xs">
+                          #{order.orderId.toString()}
+                        </TableCell>
+                        <TableCell>
+                          {customer ? customer.name : `#${order.customerId.toString()}`}
+                        </TableCell>
+                        <TableCell className="font-mono">{order.cattleTagNumber}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {format(new Date(Number(order.orderDate) / 1_000_000), 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(order.status)}</TableCell>
+                        <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">
+                          {order.deliveryNotes || '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(order)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="rounded-lg border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Order ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Cattle Tag</TableHead>
-              <TableHead>Order Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Delivery Notes</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {ordersLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : orders.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                  No orders found yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              orders.map((o) => (
-                <TableRow key={o.orderId.toString()} className="hover:bg-muted/30">
-                  <TableCell className="font-mono text-sm">#{o.orderId.toString()}</TableCell>
-                  <TableCell className="font-medium">{customerMap.get(o.customerId.toString()) || `Customer #${o.customerId}`}</TableCell>
-                  <TableCell className="font-mono">{o.cattleTagNumber}</TableCell>
-                  <TableCell>{new Date(Number(o.orderDate) / 1_000_000).toLocaleDateString()}</TableCell>
-                  <TableCell>{statusBadge(o.status)}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">{o.deliveryNotes || '—'}</TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="outline" onClick={() => openUpdate(o)} className="gap-1 h-8">
-                      <RefreshCw className="h-3 w-3" /> Update
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Update Status Dialog */}
-      <Dialog open={!!updateDialog} onOpenChange={() => setUpdateDialog(null)}>
-        <DialogContent className="max-w-md">
+      {/* Edit Dialog */}
+      <Dialog open={!!editingOrder} onOpenChange={() => setEditingOrder(null)}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Update Order Status</DialogTitle>
+            <DialogTitle>Update Order #{editingOrder?.orderId.toString()}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1">
-              <Label>Order</Label>
-              <p className="text-sm text-muted-foreground">
-                #{updateDialog?.orderId.toString()} — {updateDialog?.cattleTagNumber}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <Label>New Status *</Label>
-              <Select value={newStatus} onValueChange={v => setNewStatus(v as OrderStatus)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select
+                value={newStatus}
+                onValueChange={(v) => setNewStatus(v as OrderStatus)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={OrderStatus.Pending}>Pending</SelectItem>
-                  <SelectItem value={OrderStatus.Confirmed}>Confirmed</SelectItem>
-                  <SelectItem value={OrderStatus.OutForDelivery}>Out for Delivery</SelectItem>
-                  <SelectItem value={OrderStatus.Delivered}>Delivered</SelectItem>
-                  <SelectItem value={OrderStatus.Cancelled}>Cancelled</SelectItem>
+                  {Object.values(OrderStatus).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label>Delivery Notes</Label>
               <Textarea
                 value={notes}
-                onChange={e => setNotes(e.target.value)}
+                onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add delivery notes..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUpdateDialog(null)}>Cancel</Button>
-            <Button onClick={handleUpdate} disabled={updateStatus.isPending} className="bg-primary hover:bg-primary/90">
-              {updateStatus.isPending ? 'Updating...' : 'Update Status'}
+            <Button variant="outline" onClick={() => setEditingOrder(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Order'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

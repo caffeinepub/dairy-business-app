@@ -1,240 +1,209 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import {
+  useGetAllCustomers,
+  useDeleteCustomer,
+  useSetCustomerActive,
+} from '../hooks/useAdminQueries';
+import { CustomerAccount } from '../backend';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
-  useGetAllCustomers, useAddCustomer, useUpdateCustomer,
-  useDeleteCustomer, useSetCustomerActive
-} from '../hooks/useAdminQueries';
-import type { CustomerAccount } from '../backend';
-
-const emptyForm = {
-  name: '',
-  phone: '',
-  address: '',
-  username: '',
-  password: '',
-  isActive: true,
-};
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Plus, Pencil, Trash2, Users } from 'lucide-react';
+import { toast } from 'sonner';
+import CustomerForm from './CustomerForm';
 
 export default function AdminCustomerManagement() {
   const { data: customers = [], isLoading } = useGetAllCustomers();
-  const addCustomer = useAddCustomer();
-  const updateCustomer = useUpdateCustomer();
-  const deleteCustomer = useDeleteCustomer();
-  const setActive = useSetCustomerActive();
+  const deleteMutation = useDeleteCustomer();
+  const toggleActiveMutation = useSetCustomerActive();
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<CustomerAccount | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [deleteConfirm, setDeleteConfirm] = useState<CustomerAccount | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CustomerAccount | null>(null);
+  // Track which customer ID is currently being toggled
+  const [togglingId, setTogglingId] = useState<bigint | null>(null);
 
-  const openAdd = () => {
-    setEditingCustomer(null);
-    setForm(emptyForm);
-    setDialogOpen(true);
-  };
-
-  const openEdit = (c: CustomerAccount) => {
+  const handleEdit = (c: CustomerAccount) => {
     setEditingCustomer(c);
-    setForm({
-      name: c.name,
-      phone: c.phone,
-      address: c.address,
-      username: c.username,
-      password: '',
-      isActive: c.isActive,
-    });
-    setDialogOpen(true);
+    setShowForm(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingCustomer) {
-      await updateCustomer.mutateAsync({
-        customerId: editingCustomer.id,
-        name: form.name,
-        phone: form.phone,
-        address: form.address,
-        username: form.username,
-        passwordHash: form.password || editingCustomer.passwordHash,
-        isActive: form.isActive,
-      });
-    } else {
-      await addCustomer.mutateAsync({
-        name: form.name,
-        phone: form.phone,
-        address: form.address,
-        username: form.username,
-        passwordHash: form.password,
-        isActive: form.isActive,
-      });
-    }
-    setDialogOpen(false);
+  const handleAdd = () => {
+    setEditingCustomer(null);
+    setShowForm(true);
   };
 
   const handleDelete = async () => {
-    if (!deleteConfirm) return;
-    await deleteCustomer.mutateAsync(deleteConfirm.id);
-    setDeleteConfirm(null);
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success('Customer deleted');
+    } catch {
+      toast.error('Failed to delete customer');
+    }
+    setDeleteTarget(null);
   };
 
-  const handleToggleActive = async (c: CustomerAccount) => {
-    await setActive.mutateAsync({ customerId: c.id, isActive: !c.isActive });
+  const handleToggleActive = async (customer: CustomerAccount) => {
+    setTogglingId(customer.id);
+    try {
+      await toggleActiveMutation.mutateAsync({
+        customerId: customer.id,
+        isActive: !customer.isActive,
+      });
+      toast.success(
+        `Customer ${customer.name} ${customer.isActive ? 'deactivated' : 'activated'} successfully`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update customer status';
+      toast.error(msg);
+    } finally {
+      setTogglingId(null);
+    }
   };
-
-  const isPending = addCustomer.isPending || updateCustomer.isPending;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-admin-dark">Customer Management</h2>
-          <p className="text-sm text-muted-foreground">{customers.length} customers total</p>
-        </div>
-        <Button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-          <Plus className="h-4 w-4" /> Add Customer
-        </Button>
-      </div>
-
-      <div className="rounded-lg border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Name</TableHead>
-              <TableHead>Username</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : customers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                  No customers found. Add your first customer.
-                </TableCell>
-              </TableRow>
-            ) : (
-              customers.map((c) => (
-                <TableRow key={c.id.toString()} className="hover:bg-muted/30">
-                  <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell className="font-mono text-sm">{c.username}</TableCell>
-                  <TableCell>{c.phone}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{c.address}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={c.isActive}
-                        onCheckedChange={() => handleToggleActive(c)}
-                        disabled={setActive.isPending}
-                      />
-                      <Badge variant={c.isActive ? 'default' : 'secondary'} className={c.isActive ? 'bg-green-100 text-green-800' : ''}>
-                        {c.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(c)} className="h-8 w-8">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setDeleteConfirm(c)} className="h-8 w-8 text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Full Name *</Label>
-                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required placeholder="Customer name" />
-              </div>
-              <div className="space-y-1">
-                <Label>Phone *</Label>
-                <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} required placeholder="+91 XXXXX XXXXX" />
-              </div>
-              <div className="space-y-1 col-span-2">
-                <Label>Address *</Label>
-                <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} required placeholder="Full address" />
-              </div>
-              <div className="space-y-1">
-                <Label>Username *</Label>
-                <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required placeholder="Login username" />
-              </div>
-              <div className="space-y-1">
-                <Label>{editingCustomer ? 'New Password (leave blank to keep)' : 'Password *'}</Label>
-                <Input
-                  type="password"
-                  value={form.password}
-                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  required={!editingCustomer}
-                  placeholder={editingCustomer ? 'Leave blank to keep current' : 'Set password'}
-                />
-              </div>
-              <div className="space-y-1 col-span-2 flex items-center gap-3">
-                <Switch
-                  checked={form.isActive}
-                  onCheckedChange={v => setForm(f => ({ ...f, isActive: v }))}
-                />
-                <Label>Account Active</Label>
-              </div>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base font-display flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Customer Accounts
+          </CardTitle>
+          <Button size="sm" onClick={handleAdd}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add Customer
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isPending} className="bg-primary hover:bg-primary/90">
-                {isPending ? 'Saving...' : editingCustomer ? 'Update' : 'Add Customer'}
+          ) : customers.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
+              <p>No customers yet</p>
+              <Button variant="link" onClick={handleAdd} className="mt-1">
+                Add your first customer
               </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Username</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Active</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customers.map((c) => {
+                    const isToggling = togglingId === c.id;
+                    return (
+                      <TableRow key={c.id.toString()}>
+                        <TableCell className="font-medium">{c.name}</TableCell>
+                        <TableCell className="font-mono text-sm">{c.username}</TableCell>
+                        <TableCell>{c.phone}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{c.address}</TableCell>
+                        <TableCell>
+                          {c.isActive ? (
+                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100">Inactive</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {isToggling ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            ) : (
+                              <Switch
+                                checked={c.isActive}
+                                onCheckedChange={() => handleToggleActive(c)}
+                                disabled={isToggling || toggleActiveMutation.isPending}
+                              />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(c)}
+                              disabled={isToggling}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteTarget(c)}
+                              disabled={isToggling}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Delete Confirm Dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Customer</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete customer <strong>{deleteConfirm?.name}</strong>? This will remove their account and they will no longer be able to log in.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleteCustomer.isPending}>
-              {deleteCustomer.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      {showForm && (
+        <CustomerForm
+          customer={editingCustomer}
+          onClose={() => {
+            setShowForm(false);
+            setEditingCustomer(null);
+          }}
+        />
+      )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete customer{' '}
+              <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -1,144 +1,133 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { useCustomerLogin } from '../hooks/useCustomerQueries';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useCustomerAuth } from '../context/CustomerAuthContext';
-import { useCustomerLogin } from '../hooks/useCustomerQueries';
-import { Loader2, ArrowLeft, User } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, User, Lock, Milk } from 'lucide-react';
 
 export default function CustomerLogin() {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useCustomerAuth();
-  const customerLogin = useCustomerLogin();
+  const { login } = useCustomerAuth();
+  const loginMutation = useCustomerLogin();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  // Already authenticated — redirect to portal
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      navigate({ to: '/portal' });
-    }
-  }, [isAuthenticated, navigate]);
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginError('');
+    setError(null);
+
     try {
-      const token = await customerLogin.mutateAsync({ username, password });
-      // Parse customerId from token: "session-{id}"
-      const idStr = token.replace('session-', '');
-      const customerId = BigInt(idStr);
+      const sessionToken = await loginMutation.mutateAsync({ username, password });
+      // Extract customer ID from session token: "session-{id}"
+      const parts = sessionToken.split('-');
+      const customerId = BigInt(parts[parts.length - 1]);
+
       login({
         customerId,
         username,
-        name: username,
-        sessionToken: token,
+        name: username, // Will be updated when we fetch profile
+        sessionToken,
       });
+
       navigate({ to: '/portal' });
     } catch (err: any) {
-      setLoginError(err.message || 'Login failed. Please try again.');
+      setError(err?.message ?? 'Login failed. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-customer-bg to-green-50 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo & Title */}
-        <div className="text-center mb-8">
-          <img
-            src="/assets/generated/ao-farms-logo.dim_400x400.png"
-            alt="AO Farms"
-            className="h-16 w-16 object-contain mx-auto mb-4 rounded-xl shadow-card"
-          />
-          <h1 className="text-3xl font-bold text-admin-dark">Customer Portal</h1>
-          <p className="text-muted-foreground mt-2">Sign in to place orders and track deliveries</p>
-        </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-customer-bg px-4">
+      {/* Logo */}
+      <div className="mb-8 text-center">
+        <img src="/assets/generated/ao-farms-logo.dim_320x160.png" alt="AO Farms" className="h-16 mx-auto mb-3" />
+        <h1 className="text-3xl font-bold text-primary font-display">AO Farms</h1>
+        <p className="text-muted-foreground text-sm mt-1">Customer Portal</p>
+      </div>
 
-        <Card className="shadow-xl border-border">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              Customer Sign In
-            </CardTitle>
-            <CardDescription>Enter your credentials provided by AO Farms admin</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="username">Username</Label>
+      <Card className="w-full max-w-md shadow-card">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-farm-green/10">
+            <Milk className="h-7 w-7 text-farm-green" />
+          </div>
+          <CardTitle className="text-2xl font-display">Customer Login</CardTitle>
+          <CardDescription>
+            Sign in to place orders and track your deliveries
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="username"
+                  type="text"
+                  placeholder="Enter your username"
                   value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="Your username"
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="pl-9"
                   required
-                  autoComplete="username"
-                  disabled={customerLogin.isPending}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
+                  placeholder="Enter your password"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Your password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-9"
                   required
-                  autoComplete="current-password"
-                  disabled={customerLogin.isPending}
                 />
               </div>
+            </div>
 
-              {loginError && (
-                <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-                  {loginError}
-                </div>
+            <Button
+              type="submit"
+              className="w-full bg-farm-green hover:bg-farm-green/90 text-white"
+              size="lg"
+              disabled={loginMutation.isPending}
+            >
+              {loginMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
               )}
+            </Button>
+          </form>
 
-              <Button
-                type="submit"
-                disabled={customerLogin.isPending}
-                className="w-full bg-primary hover:bg-primary/90 h-11 text-base"
-              >
-                {customerLogin.isPending ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Signing in...</>
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
-            </form>
-
-            <p className="text-xs text-center text-muted-foreground mt-4">
-              Don't have an account? Contact AO Farms admin to get access.
-            </p>
-          </CardContent>
-        </Card>
-
-        <button
-          onClick={() => navigate({ to: '/' })}
-          className="mt-6 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to login selection
-        </button>
-      </div>
-
-      <footer className="mt-10 text-sm text-muted-foreground text-center">
-        © {new Date().getFullYear()} AO Farms. Built with ❤️ using{' '}
-        <a
-          href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          caffeine.ai
-        </a>
-      </footer>
+          <div className="mt-4 text-center">
+            <a
+              href="/"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              ← Back to Home
+            </a>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

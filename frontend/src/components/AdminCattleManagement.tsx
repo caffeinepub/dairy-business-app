@@ -1,245 +1,253 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useGetAllCattle, useDeleteCattle, useUpdateCattle } from '../hooks/useAdminQueries';
+import { Cattle, CattleAvailability, HealthStatus } from '../backend';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { useGetAllCattle, useAddCattle, useUpdateCattle, useDeleteCattle } from '../hooks/useAdminQueries';
-import { CattleAvailability, HealthStatus, type Cattle } from '../backend';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Plus, Pencil, Trash2, Beef } from 'lucide-react';
+import { toast } from 'sonner';
+import CattleForm from './CattleForm';
 
-const emptyForm = {
-  tagNumber: '',
-  breed: '',
-  dateOfPurchase: '',
-  milkingCapacity: '',
-  purchasePrice: '',
-  availability: CattleAvailability.Available as CattleAvailability,
-  healthStatus: HealthStatus.Healthy as HealthStatus,
-};
-
-function availabilityBadge(a: CattleAvailability) {
-  if (a === CattleAvailability.Available) return <Badge className="bg-green-100 text-green-800 border-green-200">Available</Badge>;
-  if (a === CattleAvailability.Sold) return <Badge className="bg-red-100 text-red-800 border-red-200">Sold</Badge>;
-  return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Reserved</Badge>;
+function availabilityBadge(status: CattleAvailability) {
+  switch (status) {
+    case CattleAvailability.Available:
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Available</Badge>;
+    case CattleAvailability.Reserved:
+      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Reserved</Badge>;
+    case CattleAvailability.Sold:
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Sold</Badge>;
+  }
 }
 
-function healthBadge(h: HealthStatus) {
-  if (h === HealthStatus.Healthy) return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Healthy</Badge>;
-  if (h === HealthStatus.Sick) return <Badge className="bg-red-100 text-red-800 border-red-200">Sick</Badge>;
-  return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Recovered</Badge>;
+function healthBadge(status: HealthStatus) {
+  switch (status) {
+    case HealthStatus.Healthy:
+      return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Healthy</Badge>;
+    case HealthStatus.Sick:
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Sick</Badge>;
+    case HealthStatus.Recovered:
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Recovered</Badge>;
+  }
 }
 
 export default function AdminCattleManagement() {
   const { data: cattle = [], isLoading } = useGetAllCattle();
-  const addCattle = useAddCattle();
-  const updateCattle = useUpdateCattle();
-  const deleteCattle = useDeleteCattle();
+  const deleteMutation = useDeleteCattle();
+  const updateMutation = useUpdateCattle();
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editingCattle, setEditingCattle] = useState<Cattle | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [deleteConfirm, setDeleteConfirm] = useState<Cattle | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Cattle | null>(null);
+  // Track which cattle ID is currently being toggled for availability
+  const [togglingId, setTogglingId] = useState<bigint | null>(null);
 
-  const openAdd = () => {
-    setEditingCattle(null);
-    setForm(emptyForm);
-    setDialogOpen(true);
-  };
-
-  const openEdit = (c: Cattle) => {
+  const handleEdit = (c: Cattle) => {
     setEditingCattle(c);
-    const d = new Date(Number(c.dateOfPurchase) / 1_000_000);
-    setForm({
-      tagNumber: c.tagNumber,
-      breed: c.breed,
-      dateOfPurchase: d.toISOString().split('T')[0],
-      milkingCapacity: c.milkingCapacity.toString(),
-      purchasePrice: c.purchasePrice.toString(),
-      availability: c.availability,
-      healthStatus: c.healthStatus,
-    });
-    setDialogOpen(true);
+    setShowForm(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const dateMs = new Date(form.dateOfPurchase).getTime();
-    const dateNs = BigInt(dateMs) * BigInt(1_000_000);
-    const payload = {
-      tagNumber: form.tagNumber,
-      breed: form.breed,
-      dateOfPurchase: dateNs,
-      milkingCapacity: parseFloat(form.milkingCapacity),
-      purchasePrice: parseFloat(form.purchasePrice),
-      availability: form.availability,
-      healthStatus: form.healthStatus,
-    };
-    if (editingCattle) {
-      await updateCattle.mutateAsync({ cattleId: editingCattle.id, ...payload });
-    } else {
-      await addCattle.mutateAsync(payload);
-    }
-    setDialogOpen(false);
+  const handleAdd = () => {
+    setEditingCattle(null);
+    setShowForm(true);
   };
 
   const handleDelete = async () => {
-    if (!deleteConfirm) return;
-    await deleteCattle.mutateAsync(deleteConfirm.id);
-    setDeleteConfirm(null);
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success('Cattle record deleted');
+    } catch {
+      toast.error('Failed to delete cattle record');
+    }
+    setDeleteTarget(null);
   };
 
-  const isPending = addCattle.isPending || updateCattle.isPending;
+  const handleAvailabilityChange = async (c: Cattle, newAvailability: CattleAvailability) => {
+    if (newAvailability === c.availability) return;
+    setTogglingId(c.id);
+    try {
+      await updateMutation.mutateAsync({
+        id: c.id,
+        tagNumber: c.tagNumber,
+        breed: c.breed,
+        dateOfPurchase: c.dateOfPurchase,
+        purchasePrice: c.purchasePrice,
+        availability: newAvailability,
+        healthStatus: c.healthStatus,
+      });
+      toast.success(`Cattle ${c.tagNumber} marked as ${newAvailability}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update availability';
+      toast.error(msg);
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-admin-dark">Cattle Management</h2>
-          <p className="text-sm text-muted-foreground">{cattle.length} records total</p>
-        </div>
-        <Button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-          <Plus className="h-4 w-4" /> Add Cattle
-        </Button>
-      </div>
-
-      <div className="rounded-lg border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Tag #</TableHead>
-              <TableHead>Breed</TableHead>
-              <TableHead>Date of Purchase</TableHead>
-              <TableHead>Milking (L/day)</TableHead>
-              <TableHead>Price (₹)</TableHead>
-              <TableHead>Availability</TableHead>
-              <TableHead>Health</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((_, j) => (
-                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : cattle.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
-                  No cattle records found. Add your first cattle record.
-                </TableCell>
-              </TableRow>
-            ) : (
-              cattle.map((c) => (
-                <TableRow key={c.id.toString()} className="hover:bg-muted/30">
-                  <TableCell className="font-mono font-medium">{c.tagNumber}</TableCell>
-                  <TableCell>{c.breed}</TableCell>
-                  <TableCell>{new Date(Number(c.dateOfPurchase) / 1_000_000).toLocaleDateString()}</TableCell>
-                  <TableCell>{c.milkingCapacity.toFixed(1)}</TableCell>
-                  <TableCell>₹{c.purchasePrice.toLocaleString()}</TableCell>
-                  <TableCell>{availabilityBadge(c.availability)}</TableCell>
-                  <TableCell>{healthBadge(c.healthStatus)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(c)} className="h-8 w-8">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setDeleteConfirm(c)} className="h-8 w-8 text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingCattle ? 'Edit Cattle Record' : 'Add New Cattle'}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Tag Number *</Label>
-                <Input value={form.tagNumber} onChange={e => setForm(f => ({ ...f, tagNumber: e.target.value }))} required placeholder="e.g. TAG-001" />
-              </div>
-              <div className="space-y-1">
-                <Label>Breed *</Label>
-                <Input value={form.breed} onChange={e => setForm(f => ({ ...f, breed: e.target.value }))} required placeholder="e.g. Holstein" />
-              </div>
-              <div className="space-y-1">
-                <Label>Date of Purchase *</Label>
-                <Input type="date" value={form.dateOfPurchase} onChange={e => setForm(f => ({ ...f, dateOfPurchase: e.target.value }))} required />
-              </div>
-              <div className="space-y-1">
-                <Label>Milking Capacity (L/day) *</Label>
-                <Input type="number" step="0.1" min="0" value={form.milkingCapacity} onChange={e => setForm(f => ({ ...f, milkingCapacity: e.target.value }))} required placeholder="e.g. 15.5" />
-              </div>
-              <div className="space-y-1">
-                <Label>Purchase Price (₹) *</Label>
-                <Input type="number" min="0" value={form.purchasePrice} onChange={e => setForm(f => ({ ...f, purchasePrice: e.target.value }))} required placeholder="e.g. 50000" />
-              </div>
-              <div className="space-y-1">
-                <Label>Availability *</Label>
-                <Select value={form.availability} onValueChange={v => setForm(f => ({ ...f, availability: v as CattleAvailability }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={CattleAvailability.Available}>Available</SelectItem>
-                    <SelectItem value={CattleAvailability.Reserved}>Reserved</SelectItem>
-                    <SelectItem value={CattleAvailability.Sold}>Sold</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1 col-span-2">
-                <Label>Health Status *</Label>
-                <Select value={form.healthStatus} onValueChange={v => setForm(f => ({ ...f, healthStatus: v as HealthStatus }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={HealthStatus.Healthy}>Healthy</SelectItem>
-                    <SelectItem value={HealthStatus.Sick}>Sick</SelectItem>
-                    <SelectItem value={HealthStatus.Recovered}>Recovered</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base font-display flex items-center gap-2">
+            <Beef className="h-5 w-5 text-primary" />
+            Cattle Records
+          </CardTitle>
+          <Button size="sm" onClick={handleAdd}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add Cattle
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isPending} className="bg-primary hover:bg-primary/90">
-                {isPending ? 'Saving...' : editingCattle ? 'Update' : 'Add Cattle'}
+          ) : cattle.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Beef className="h-10 w-10 mx-auto mb-2 opacity-30" />
+              <p>No cattle records yet</p>
+              <Button variant="link" onClick={handleAdd} className="mt-1">
+                Add your first cattle record
               </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tag #</TableHead>
+                    <TableHead>Breed</TableHead>
+                    <TableHead>Purchase Date</TableHead>
+                    <TableHead>Price (₹)</TableHead>
+                    <TableHead>Availability</TableHead>
+                    <TableHead>Health</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cattle.map((c) => {
+                    const isToggling = togglingId === c.id;
+                    return (
+                      <TableRow key={c.id.toString()}>
+                        <TableCell className="font-mono font-medium">{c.tagNumber}</TableCell>
+                        <TableCell>{c.breed}</TableCell>
+                        <TableCell>
+                          {new Date(Number(c.dateOfPurchase) / 1_000_000).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>₹{c.purchasePrice.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {isToggling ? (
+                              <div className="flex items-center gap-1.5">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                                {availabilityBadge(c.availability)}
+                              </div>
+                            ) : (
+                              <Select
+                                value={c.availability}
+                                onValueChange={(v) =>
+                                  handleAvailabilityChange(c, v as CattleAvailability)
+                                }
+                                disabled={isToggling || updateMutation.isPending}
+                              >
+                                <SelectTrigger className="h-7 w-[120px] text-xs border-0 p-0 shadow-none focus:ring-0 bg-transparent">
+                                  <SelectValue>
+                                    {availabilityBadge(c.availability)}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value={CattleAvailability.Available}>
+                                    Available
+                                  </SelectItem>
+                                  <SelectItem value={CattleAvailability.Reserved}>
+                                    Reserved
+                                  </SelectItem>
+                                  <SelectItem value={CattleAvailability.Sold}>
+                                    Sold
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{healthBadge(c.healthStatus)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(c)}
+                              disabled={isToggling}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteTarget(c)}
+                              disabled={isToggling}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Delete Confirm Dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Cattle Record</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete cattle <strong>{deleteConfirm?.tagNumber}</strong>? This action cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleteCattle.isPending}>
-              {deleteCattle.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      {/* Add/Edit Form Dialog */}
+      {showForm && (
+        <CattleForm
+          cattle={editingCattle}
+          onClose={() => {
+            setShowForm(false);
+            setEditingCattle(null);
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Cattle Record</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete cattle with tag{' '}
+              <strong>{deleteTarget?.tagNumber}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

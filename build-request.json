@@ -1,107 +1,131 @@
 {
   "kind": "build_request",
-  "title": "Split login page into separate Admin and Customer entry points",
-  "projectName": "AO Farms Portal",
+  "title": "AO Farms Dashboard UI — Phase 1 Shell",
+  "projectName": "AO Farms",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Create a dedicated landing/login selection page that presents two clearly labeled entry points: 'Admin Login' and 'Customer Login', allowing users to choose their portal before proceeding.",
+      "text": "Implement a top navigation bar with the AO Farms logo (green cow head icon + 'A.O. Farms' text) on the left, and navigation links: Dashboard, Cattle, Milk Production, Inventory, Customers, Deliveries. The active link should use a filled dark-green pill/button style. Navigation should route to existing app routes.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6",
-          "msg-8"
+          "user-latest"
         ],
         "quotes": [
-          "we just create before that on login page here we have to split one admin and customer page"
+          "ok do it"
         ]
       },
       "acceptanceCriteria": [
-        "A login selection page is shown as the default landing route",
-        "Two distinct buttons or sections are visible: one for Admin and one for Customer",
-        "Clicking 'Admin Login' navigates to the admin authentication flow",
-        "Clicking 'Customer Login' navigates to the customer portal login form"
+        "Logo displays on the top-left with green cow icon and 'A.O. Farms' text",
+        "All 6 nav links are visible on desktop",
+        "Active route link is highlighted with a dark green filled style",
+        "Navigation links route to their respective pages"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Restore the working admin login flow from Version 28: the Admin login page must use Internet Identity authentication, verify admin role via the backend actor, and redirect to the admin dashboard on success. Display a clear error if the authenticated principal is not an admin.",
-      "target": "both",
+      "text": "Add a full-width hero banner below the nav bar on the Dashboard page showing an illustrated farm landscape (barn, trees, mountains, sunrise sky) with the text 'Welcome to AO Farms' and subtitle 'Here's your dairy farm overview for today' overlaid on the left side of the image.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6",
-          "msg-8"
-        ],
-        "quotes": [
-          "please understand version 28 is everything is ok that is admin login",
-          "Keep the existing admin login flow as it was in Version 28"
+          "user-latest"
         ]
       },
       "acceptanceCriteria": [
-        "Admin Login page shows an Internet Identity login button",
-        "After authentication, the backend isAdmin check is called",
-        "Successful admin authentication redirects to the admin dashboard",
-        "Non-admin principals see a clear 'Access denied' or 'Not authorized' message",
-        "Admin session persists across page refreshes"
+        "Hero banner spans full width of the page",
+        "Farm landscape illustration is rendered as the banner background",
+        "Title 'Welcome to AO Farms' and subtitle text are visible over the banner",
+        "A cow emoji or small cow icon appears next to the title"
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Create a dedicated Customer Login page where customers authenticate using their username and password credentials managed in the backend CustomerAccount store. On success, store the customer session and redirect to the Customer Portal.",
-      "target": "both",
+      "text": "Display 6 summary stat cards on the Dashboard in a single row: (1) Total Cattle — count + active count subtext, (2) Today's Milk — total litres, (3) Inventory Items — total tracked items, (4) Low Stock — items below threshold of 10, (5) Today's Deliveries — logged today, (6) Missed Deliveries — not delivered today. Each card has a label, numeric value, subtext, and a small icon. Cards use a light beige/cream background with green icon accents.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6",
-          "msg-8"
-        ],
-        "quotes": [
-          "we just create before that on login page here we have to split one admin and customer page"
+          "user-latest"
         ]
       },
       "acceptanceCriteria": [
-        "Customer Login page displays username and password input fields",
-        "Submitting valid credentials authenticates the customer via the backend loginCustomer call",
-        "Successful login stores the customer session (via CustomerAuthContext) and redirects to the customer portal",
-        "Invalid credentials display a user-friendly error message",
-        "Customer session persists in sessionStorage across page refreshes"
+        "All 6 stat cards are rendered in a responsive row",
+        "Each card shows label, value, subtext, and icon",
+        "Values are pulled from backend query hooks (cattle count, milk records, inventory, deliveries)",
+        "Low stock threshold is 10",
+        "Cards use cream/beige background matching farm theme"
       ]
     },
     {
       "id": "REQ-4",
-      "text": "Update the app routing so that the root path ('/') renders the new login selection page. Protect the admin panel routes to redirect unauthenticated or non-admin users back to the admin login page. Protect the customer portal route to redirect unauthenticated customers back to the customer login page.",
+      "text": "Add a '7-Day Milk Production' line/area chart on the Dashboard (left panel) showing daily milk totals for the last 7 days using existing MilkProductionTrendChart component or equivalent Recharts line chart.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6",
-          "msg-8"
-        ],
-        "quotes": [
-          "Add a separate Customer login section or page",
-          "The main login page should clearly separate Admin vs. Customer access"
+          "user-latest"
         ]
       },
       "acceptanceCriteria": [
-        "Navigating to '/' shows the login selection page",
-        "Navigating directly to an admin route without authentication redirects to admin login",
-        "Navigating directly to the customer portal without a customer session redirects to customer login",
-        "Both portals are fully inaccessible without proper authentication"
+        "Chart renders in the lower-left panel of the Dashboard",
+        "X-axis shows last 7 days",
+        "Y-axis shows milk volume in litres",
+        "Data comes from milk production records"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Add a 'Recent Milk Entries' panel on the Dashboard (right panel) listing the most recent milk production log entries with cattle tag, date, and volume. Show an empty state if no records exist.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "user-latest"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Panel appears in the lower-right of the Dashboard",
+        "Lists recent milk entries with cattle tag, date, and litres",
+        "Shows empty state message when no records exist",
+        "Displays at most 5–8 most recent entries"
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "text": "Apply a consistent farm-themed visual style across all pages: beige/cream (#f5f0e8 or similar) page background, dark green (#1a5c2a or similar) primary color for nav, buttons, and accents, warm white card backgrounds, earthy tones for text. Use the existing CSS custom properties in frontend/src/index.css where possible.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "user-latest"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Page background is beige/cream",
+        "Navigation bar uses dark green background",
+        "Primary buttons and active states use dark green",
+        "Cards have warm white background",
+        "Typography uses earthy/dark tones"
       ]
     }
   ],
   "constraints": [
-    "Do not change the backend authentication logic or data model for admin or customer accounts",
-    "Preserve the CustomerAuthContext session management in frontend/src/context/CustomerAuthContext.tsx",
-    "Do not modify any files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui"
+    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui",
+    "Keep all Motoko logic in backend/main.mo — do not create additional backend files unless migration is needed",
+    "Do not change existing backend data models or CRUD endpoints"
   ],
   "nonGoals": [
-    "Adding new admin or customer account types or roles",
-    "Changing the admin dashboard or customer portal feature set beyond fixing login access",
-    "Adding social or third-party authentication methods",
-    "Redesigning the overall visual theme of the app"
+    "Customer portal or customer-facing pages",
+    "Cattle management CRUD forms (separate phase)",
+    "Milk Production logging forms (separate phase)",
+    "Inventory management CRUD (separate phase)",
+    "Customer management CRUD (separate phase)",
+    "Deliveries management (separate phase)",
+    "Monthly reports page",
+    "CSV export functionality"
   ],
   "imageRequirements": {
-    "required": [],
+    "required": [
+      "Illustrated farm landscape banner with red barn on left, green trees, rolling mountains, and warm sunrise sky in a flat/cartoon style (farm-hero-banner.dim_1400x300.png)",
+      "AO Farms logo: green cartoon cow head with horns inside a circular badge with 'A.O. Farms' text below in dark green on transparent background (ao-farms-logo.dim_120x80.png)"
+    ],
     "edits": []
   }
 }

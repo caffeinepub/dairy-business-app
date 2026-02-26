@@ -1,6 +1,20 @@
-import React, { useState } from 'react';
-import { Link, Outlet, useRouterState } from '@tanstack/react-router';
-import { Menu, X, LayoutDashboard, Beef, Droplets, Package, Users, Truck, BarChart3, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Outlet, useNavigate, useLocation } from '@tanstack/react-router';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { useIsCallerAdmin } from '../hooks/useAdminQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import {
+  LayoutDashboard,
+  Beef,
+  Users,
+  Truck,
+  LogOut,
+  Menu,
+  X,
+  Droplets,
+  Package,
+} from 'lucide-react';
+import { useState } from 'react';
 
 const navLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -9,145 +23,132 @@ const navLinks = [
   { to: '/inventory', label: 'Inventory', icon: Package },
   { to: '/customers', label: 'Customers', icon: Users },
   { to: '/deliveries', label: 'Deliveries', icon: Truck },
-  { to: '/reports', label: 'Reports', icon: BarChart3 },
 ];
 
 export default function Layout() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const { clear, identity } = useInternetIdentity();
+  const { data: isAdmin } = useIsCallerAdmin();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const routerState = useRouterState();
-  const currentPath = routerState.location.pathname;
 
-  const isActive = (to: string) => {
-    if (to === '/dashboard') return currentPath === '/dashboard';
-    return currentPath.startsWith(to);
+  const handleLogout = async () => {
+    await clear();
+    queryClient.clear();
+    navigate({ to: '/admin-login' });
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Navigation */}
-      <header className="bg-admin-dark text-white shadow-lg sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link to="/dashboard" className="flex items-center gap-3 shrink-0">
-              <img
-                src="/assets/generated/ao-farms-logo.dim_320x160.png"
-                alt="AO Farms"
-                className="h-8 object-contain brightness-0 invert"
-              />
-              <span className="font-bold text-lg hidden sm:block">AO Farms</span>
-            </Link>
+    <div className="min-h-screen flex flex-col bg-farm-bg">
+      {/* Top Nav */}
+      <header className="bg-white sticky top-0 z-20 shadow-sm border-b border-farm-border">
+        <div className="px-4 flex items-center justify-between h-16 max-w-[1400px] mx-auto">
+          {/* Logo */}
+          <button
+            onClick={() => navigate({ to: '/dashboard' })}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0"
+          >
+            <img
+              src="/assets/generated/ao-farms-logo.dim_120x80.png"
+              alt="AO Farms"
+              className="h-12 w-auto"
+            />
+          </button>
 
-            {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-1">
-              {navLinks.map(({ to, label, icon: Icon }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(to)
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Link>
-              ))}
-            </nav>
-
-            {/* Right side links */}
-            <div className="hidden lg:flex items-center gap-2">
-              <Link
-                to="/admin"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navLinks.map(({ to, label, icon: Icon }) => (
+              <button
+                key={to}
+                onClick={() => navigate({ to: to as any })}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
+                  isActive(to)
+                    ? 'bg-farm-primary text-white'
+                    : 'text-farm-text hover:text-farm-primary hover:bg-farm-primary/10'
+                }`}
               >
-                <ShieldCheck className="h-4 w-4" />
-                Admin Panel
-              </Link>
-              <Link
-                to="/portal"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Customer Portal
-              </Link>
-            </div>
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </nav>
 
-            {/* Mobile hamburger */}
+          {/* Right Actions */}
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-farm-text/70 hover:text-farm-primary hover:bg-farm-primary/10 hidden md:flex"
+              >
+                <LogOut className="h-4 w-4 mr-1.5" />
+                Sign Out
+              </Button>
+            )}
+            {/* Mobile Menu Toggle */}
             <button
-              className="lg:hidden p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10"
+              className="md:hidden text-farm-text p-1"
               onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Toggle menu"
             >
-              {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Nav */}
         {mobileOpen && (
-          <div className="lg:hidden border-t border-white/10 bg-admin-dark">
-            <nav className="px-4 py-3 space-y-1">
-              {navLinks.map(({ to, label, icon: Icon }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(to)
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Link>
-              ))}
-              <div className="pt-2 border-t border-white/10 space-y-1">
-                <Link
-                  to="/admin"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  Admin Panel
-                </Link>
-                <Link
-                  to="/portal"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Customer Portal
-                </Link>
-              </div>
-            </nav>
+          <div className="md:hidden bg-white border-t border-farm-border px-4 py-3 space-y-1">
+            {navLinks.map(({ to, label, icon: Icon }) => (
+              <button
+                key={to}
+                onClick={() => {
+                  navigate({ to: to as any });
+                  setMobileOpen(false);
+                }}
+                className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-semibold transition-colors ${
+                  isActive(to)
+                    ? 'bg-farm-primary text-white'
+                    : 'text-farm-text hover:text-farm-primary hover:bg-farm-primary/10'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm font-semibold text-farm-text/70 hover:text-farm-primary hover:bg-farm-primary/10"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </button>
           </div>
         )}
       </header>
 
-      {/* Main Content */}
+      {/* Page Content */}
       <main className="flex-1">
         <Outlet />
       </main>
 
       {/* Footer */}
-      <footer className="bg-admin-dark text-white/60 py-6 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
-          <p>© {new Date().getFullYear()} AO Farms. All rights reserved.</p>
-          <p>
-            Built with ❤️ using{' '}
-            <a
-              href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:text-primary/80 underline"
-            >
-              caffeine.ai
-            </a>
-          </p>
-        </div>
+      <footer className="py-4 text-center text-xs text-farm-text/50 border-t border-farm-border bg-white">
+        <p>
+          © {new Date().getFullYear()} AO Farms · Built with{' '}
+          <span className="text-red-500">♥</span> using{' '}
+          <a
+            href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-farm-primary hover:underline"
+          >
+            caffeine.ai
+          </a>
+        </p>
       </footer>
     </div>
   );

@@ -1,90 +1,192 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { useIsCallerAdmin, useGetAllOrders } from '../hooks/useAdminQueries';
+import { OrderStatus, CattleOrder } from '../backend';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3 } from 'lucide-react';
-import { useGetAllOrders, useGetAllCustomers } from '../hooks/useAdminQueries';
-import { OrderStatus } from '../backend';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Loader2, ChevronDown, ChevronRight, BarChart3 } from 'lucide-react';
+import { format } from 'date-fns';
 
-export default function MonthlyReports() {
-  const { data: orders = [], isLoading: ordersLoading } = useGetAllOrders();
-  const { data: customers = [] } = useGetAllCustomers();
+interface MonthGroup {
+  monthKey: string;
+  label: string;
+  orders: CattleOrder[];
+  delivered: number;
+  pending: number;
+  cancelled: number;
+  confirmed: number;
+  outForDelivery: number;
+}
 
-  const customerMap = new Map(customers.map(c => [c.id.toString(), c.name]));
+function groupOrdersByMonth(orders: CattleOrder[]): MonthGroup[] {
+  const map = new Map<string, CattleOrder[]>();
 
-  // Group orders by month
-  const byMonth = new Map<string, typeof orders>();
-  for (const o of orders) {
-    const d = new Date(Number(o.orderDate) / 1_000_000);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    if (!byMonth.has(key)) byMonth.set(key, []);
-    byMonth.get(key)!.push(o);
+  for (const order of orders) {
+    const date = new Date(Number(order.orderDate) / 1_000_000);
+    const key = format(date, 'yyyy-MM');
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(order);
   }
 
-  const months = Array.from(byMonth.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  return Array.from(map.entries())
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([key, orders]) => ({
+      monthKey: key,
+      label: format(new Date(key + '-01'), 'MMMM yyyy'),
+      orders,
+      delivered: orders.filter((o) => o.status === OrderStatus.Delivered).length,
+      pending: orders.filter((o) => o.status === OrderStatus.Pending).length,
+      cancelled: orders.filter((o) => o.status === OrderStatus.Cancelled).length,
+      confirmed: orders.filter((o) => o.status === OrderStatus.Confirmed).length,
+      outForDelivery: orders.filter((o) => o.status === OrderStatus.OutForDelivery).length,
+    }));
+}
 
-  const statusColors: Record<string, string> = {
-    [OrderStatus.Pending]: 'bg-yellow-100 text-yellow-800',
-    [OrderStatus.Confirmed]: 'bg-blue-100 text-blue-800',
-    [OrderStatus.OutForDelivery]: 'bg-purple-100 text-purple-800',
-    [OrderStatus.Delivered]: 'bg-green-100 text-green-800',
-    [OrderStatus.Cancelled]: 'bg-red-100 text-red-800',
+function getStatusBadgeClass(status: OrderStatus): string {
+  switch (status) {
+    case OrderStatus.Pending: return 'bg-yellow-100 text-yellow-800';
+    case OrderStatus.Confirmed: return 'bg-blue-100 text-blue-800';
+    case OrderStatus.OutForDelivery: return 'bg-purple-100 text-purple-800';
+    case OrderStatus.Delivered: return 'bg-green-100 text-green-800';
+    case OrderStatus.Cancelled: return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+}
+
+export default function MonthlyReports() {
+  const navigate = useNavigate();
+  const { data: isAdmin, isLoading: adminCheckLoading } = useIsCallerAdmin();
+  const { data: orders = [], isLoading: ordersLoading } = useGetAllOrders();
+  const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!adminCheckLoading && isAdmin === false) {
+      navigate({ to: '/admin-login' });
+    }
+  }, [isAdmin, adminCheckLoading, navigate]);
+
+  if (adminCheckLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) return null;
+
+  const monthGroups = groupOrdersByMonth(orders);
+
+  const toggleMonth = (key: string) => {
+    setOpenMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-admin-dark flex items-center gap-2">
-          <BarChart3 className="h-6 w-6 text-primary" /> Monthly Reports
-        </h1>
-        <p className="text-muted-foreground">Order summary grouped by month</p>
+    <div className="container mx-auto px-4 py-6 max-w-5xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold font-display text-foreground">Monthly Reports</h1>
+        <p className="text-sm text-muted-foreground mt-1">Order summaries grouped by month</p>
       </div>
 
       {ordersLoading ? (
-        <p className="text-muted-foreground">Loading...</p>
-      ) : months.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">No orders to report yet.</CardContent>
-        </Card>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : monthGroups.length === 0 ? (
+        <div className="text-center py-20 text-muted-foreground">
+          <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p>No orders found</p>
+        </div>
       ) : (
-        months.map(([month, monthOrders]) => {
-          const delivered = monthOrders.filter(o => o.status === OrderStatus.Delivered).length;
-          const pending = monthOrders.filter(o => o.status === OrderStatus.Pending).length;
-          const cancelled = monthOrders.filter(o => o.status === OrderStatus.Cancelled).length;
-          const [year, m] = month.split('-');
-          const label = new Date(parseInt(year), parseInt(m) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-
-          return (
-            <Card key={month} className="shadow-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span>{label}</span>
-                  <span className="text-sm font-normal text-muted-foreground">{monthOrders.length} orders</span>
-                </CardTitle>
-                <div className="flex gap-3 text-sm">
-                  <span className="text-green-700">✓ {delivered} delivered</span>
-                  <span className="text-yellow-700">⏳ {pending} pending</span>
-                  <span className="text-red-700">✗ {cancelled} cancelled</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {monthOrders.map(o => (
-                    <div key={o.orderId.toString()} className="flex items-center justify-between py-1.5 border-b border-border last:border-0 text-sm">
-                      <div>
-                        <span className="font-medium">{customerMap.get(o.customerId.toString()) || `Customer #${o.customerId}`}</span>
-                        <span className="text-muted-foreground ml-2 font-mono">{o.cattleTagNumber}</span>
+        <div className="space-y-4">
+          {monthGroups.map((group) => (
+            <Collapsible
+              key={group.monthKey}
+              open={openMonths.has(group.monthKey)}
+              onOpenChange={() => toggleMonth(group.monthKey)}
+            >
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {openMonths.has(group.monthKey) ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <CardTitle className="text-base font-display">{group.label}</CardTitle>
+                        <Badge variant="secondary">{group.orders.length} orders</Badge>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">{new Date(Number(o.orderDate) / 1_000_000).toLocaleDateString()}</span>
-                        <Badge className={statusColors[String(o.status)] ?? ''}>{String(o.status)}</Badge>
+                      <div className="flex gap-2 flex-wrap justify-end">
+                        {group.delivered > 0 && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 font-medium">
+                            {group.delivered} delivered
+                          </span>
+                        )}
+                        {group.pending > 0 && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-medium">
+                            {group.pending} pending
+                          </span>
+                        )}
+                        {group.cancelled > 0 && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-medium">
+                            {group.cancelled} cancelled
+                          </span>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })
+                  </CardHeader>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <div className="border-t border-border pt-4">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-muted-foreground border-b border-border">
+                              <th className="pb-2 pr-4">Order ID</th>
+                              <th className="pb-2 pr-4">Customer</th>
+                              <th className="pb-2 pr-4">Cattle Tag</th>
+                              <th className="pb-2 pr-4">Date</th>
+                              <th className="pb-2">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.orders
+                              .sort((a, b) => Number(b.orderDate) - Number(a.orderDate))
+                              .map((order) => (
+                                <tr key={order.orderId.toString()} className="border-b border-border/50 last:border-0">
+                                  <td className="py-2 pr-4 font-mono text-xs">#{order.orderId.toString()}</td>
+                                  <td className="py-2 pr-4">#{order.customerId.toString()}</td>
+                                  <td className="py-2 pr-4">{order.cattleTagNumber}</td>
+                                  <td className="py-2 pr-4 text-muted-foreground">
+                                    {format(new Date(Number(order.orderDate) / 1_000_000), 'MMM d, yyyy')}
+                                  </td>
+                                  <td className="py-2">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getStatusBadgeClass(order.status)}`}>
+                                      {order.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          ))}
+        </div>
       )}
     </div>
   );

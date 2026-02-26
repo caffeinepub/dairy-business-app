@@ -7,6 +7,7 @@ export default {
       fontFamily: {
         sans: ['Nunito', 'system-ui', 'sans-serif'],
         serif: ['Merriweather', 'Georgia', 'serif'],
+        display: ['Nunito', 'system-ui', 'sans-serif'],
       },
       colors: {
         background: 'oklch(var(--background) / <alpha-value>)',
@@ -63,13 +64,18 @@ export default {
         'admin-dark': 'oklch(var(--admin-dark) / <alpha-value>)',
         'admin-bg': 'oklch(var(--admin-bg) / <alpha-value>)',
         'customer-bg': 'oklch(var(--customer-bg) / <alpha-value>)',
+        // Farm-specific semantic tokens
+        'farm-primary': 'oklch(var(--farm-primary) / <alpha-value>)',
+        'farm-bg': 'oklch(var(--farm-bg) / <alpha-value>)',
+        'farm-text': 'oklch(var(--farm-text) / <alpha-value>)',
+        'farm-border': 'oklch(var(--farm-border) / <alpha-value>)',
         // Farm palette
         farm: {
-          green: 'oklch(0.48 0.15 145 / <alpha-value>)',
-          'green-light': 'oklch(0.72 0.12 145 / <alpha-value>)',
+          green: 'oklch(0.38 0.12 145 / <alpha-value>)',
+          'green-light': 'oklch(0.62 0.12 145 / <alpha-value>)',
           brown: 'oklch(0.42 0.08 60 / <alpha-value>)',
           tan: 'oklch(0.82 0.06 75 / <alpha-value>)',
-          cream: 'oklch(0.96 0.02 90 / <alpha-value>)',
+          cream: 'oklch(0.96 0.015 85 / <alpha-value>)',
         },
       },
       borderRadius: {

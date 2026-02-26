@@ -14,13 +14,12 @@ export function exportCustomersToCSV(customers: CustomerAccount[]): void {
 }
 
 export function exportCattleToCSV(cattle: Cattle[]): void {
-  const headers = ['ID', 'Tag Number', 'Breed', 'Date of Purchase', 'Milking Capacity (L/day)', 'Purchase Price', 'Availability', 'Health Status'];
+  const headers = ['ID', 'Tag Number', 'Breed', 'Date of Purchase', 'Purchase Price', 'Availability', 'Health Status'];
   const rows = cattle.map(c => [
     c.id.toString(),
     c.tagNumber,
     c.breed,
     new Date(Number(c.dateOfPurchase) / 1_000_000).toLocaleDateString(),
-    c.milkingCapacity.toFixed(1),
     c.purchasePrice.toFixed(2),
     String(c.availability),
     String(c.healthStatus),

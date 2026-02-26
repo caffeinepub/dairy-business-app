@@ -1,44 +1,62 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Cattle/customer management platform with admin and customer portals. Version 28 had working admin login. Current goal is to split the login page into two separate entry points — one for Admin and one for Customer — each with their own dedicated portal access.",
+  "summary": "AO Farms Dairy/Milk Management System — staff-only login via Internet Identity, farm-themed UI. Modules: Dashboard (6 summary cards + 7-day milk chart + recent entries), Cattle (add/edit/delete + active/inactive toggle), Milk Production, Inventory (low stock alerts), Customers (add/edit/delete + active/inactive toggle), Deliveries. Build has repeatedly failed due to scope/complexity limits.",
   "architectural_notes": [
-    "Version 28 is the stable baseline with working admin login — use it as reference for admin authentication flow"
+    "Build repeatedly fails when attempting full app in one shot — incremental/phased build approach recommended",
+    "Project name: AO Farms; branding uses green header, beige/cream background, cow logo"
   ],
   "known_issues": [
-    "Version 30 deployment is missing login credentials/access for both admin and customer portals"
+    "Repeated build failures (20+ attempts) likely due to prompt/scope complexity exceeding AI generation limits"
   ],
-  "isFixRequest": true,
+  "isFixRequest": false,
+  "imageRequirements": "## Required Images\n- Illustrated farm landscape banner with red barn on left, green trees, rolling mountains, and warm sunrise sky in a flat/cartoon style (farm-hero-banner.dim_1400x300.png)\n- AO Farms logo: green cartoon cow head with horns inside a circular badge with 'A.O. Farms' text below in dark green on transparent background (ao-farms-logo.dim_120x80.png)",
   "existing_features": [
     {
-      "id": "feature-create-a-dedicated-landing-login-selection-page-that-presents-two-clearly-labeled-entry-points-admin-login-and-customer-login-allowing-users-to-choose-their-portal-before-proceeding",
-      "title": "Create a dedicated landing/login selection page that presents two clearly labeled entry points: 'Admin Login' and 'Customer Login', allowing users to choose their portal before proceeding.",
+      "id": "feature-implement-a-top-navigation-bar-with-the-ao-farms-logo-green-cow-head-icon-a-o-farms-text-on-the-left-and-navigation-links-dashboard-cattle-milk-production-inventory-customers-deliveries-the-active-link-should-use-a-filled-dark-green-pill-button-style-navigation-should-route-to-existing-app-routes",
+      "title": "Implement a top navigation bar with the AO Farms logo (green cow head icon + 'A.O. Farms' text) on the left, and navigation links: Dashboard, Cattle, Milk Production, Inventory, Customers, Deliveries. The active link should use a filled dark-green pill/button style. Navigation should route to existing app routes.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-restore-the-working-admin-login-flow-from-version-28-the-admin-login-page-must-use-internet-identity-authentication-verify-admin-role-via-the-backend-actor-and-redirect-to-the-admin-dashboard-on-success-display-a-clear-error-if-the-authenticated-principal-is-not-an-admin",
-      "title": "Restore the working admin login flow from Version 28: the Admin login page must use Internet Identity authentication, verify admin role via the backend actor, and redirect to the admin dashboard on success. Display a clear error if the authenticated principal is not an admin.",
+      "id": "feature-add-a-full-width-hero-banner-below-the-nav-bar-on-the-dashboard-page-showing-an-illustrated-farm-landscape-barn-trees-mountains-sunrise-sky-with-the-text-welcome-to-ao-farms-and-subtitle-here-s-your-dairy-farm-overview-for-today-overlaid-on-the-left-side-of-the-image",
+      "title": "Add a full-width hero banner below the nav bar on the Dashboard page showing an illustrated farm landscape (barn, trees, mountains, sunrise sky) with the text 'Welcome to AO Farms' and subtitle 'Here's your dairy farm overview for today' overlaid on the left side of the image.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-create-a-dedicated-customer-login-page-where-customers-authenticate-using-their-username-and-password-credentials-managed-in-the-backend-customeraccount-store-on-success-store-the-customer-session-and-redirect-to-the-customer-portal",
-      "title": "Create a dedicated Customer Login page where customers authenticate using their username and password credentials managed in the backend CustomerAccount store. On success, store the customer session and redirect to the Customer Portal.",
+      "id": "feature-display-6-summary-stat-cards-on-the-dashboard-in-a-single-row-1-total-cattle-count-active-count-subtext-2-today-s-milk-total-litres-3-inventory-items-total-tracked-items-4-low-stock-items-below-threshold-of-10-5-today-s-deliveries-logged-today-6-missed-deliveries-not-delivered-today-each-card-has-a-label-numeric-value-subtext-and-a-small-icon-cards-use-a-light-beige-cream-background-with-green-icon-accents",
+      "title": "Display 6 summary stat cards on the Dashboard in a single row: (1) Total Cattle — count + active count subtext, (2) Today's Milk — total litres, (3) Inventory Items — total tracked items, (4) Low Stock — items below threshold of 10, (5) Today's Deliveries — logged today, (6) Missed Deliveries — not delivered today. Each card has a label, numeric value, subtext, and a small icon. Cards use a light beige/cream background with green icon accents.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-the-app-routing-so-that-the-root-path-renders-the-new-login-selection-page-protect-the-admin-panel-routes-to-redirect-unauthenticated-or-non-admin-users-back-to-the-admin-login-page-protect-the-customer-portal-route-to-redirect-unauthenticated-customers-back-to-the-customer-login-page",
-      "title": "Update the app routing so that the root path ('/') renders the new login selection page. Protect the admin panel routes to redirect unauthenticated or non-admin users back to the admin login page. Protect the customer portal route to redirect unauthenticated customers back to the customer login page.",
+      "id": "feature-add-a-7-day-milk-production-line-area-chart-on-the-dashboard-left-panel-showing-daily-milk-totals-for-the-last-7-days-using-existing-milkproductiontrendchart-component-or-equivalent-recharts-line-chart",
+      "title": "Add a '7-Day Milk Production' line/area chart on the Dashboard (left panel) showing daily milk totals for the last 7 days using existing MilkProductionTrendChart component or equivalent Recharts line chart.",
       "reqIds": [
         "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-recent-milk-entries-panel-on-the-dashboard-right-panel-listing-the-most-recent-milk-production-log-entries-with-cattle-tag-date-and-volume-show-an-empty-state-if-no-records-exist",
+      "title": "Add a 'Recent Milk Entries' panel on the Dashboard (right panel) listing the most recent milk production log entries with cattle tag, date, and volume. Show an empty state if no records exist.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-consistent-farm-themed-visual-style-across-all-pages-beige-cream-f5f0e8-or-similar-page-background-dark-green-1a5c2a-or-similar-primary-color-for-nav-buttons-and-accents-warm-white-card-backgrounds-earthy-tones-for-text-use-the-existing-css-custom-properties-in-frontend-src-index-css-where-possible",
+      "title": "Apply a consistent farm-themed visual style across all pages: beige/cream (#f5f0e8 or similar) page background, dark green (#1a5c2a or similar) primary color for nav, buttons, and accents, warm white card backgrounds, earthy tones for text. Use the existing CSS custom properties in frontend/src/index.css where possible.",
+      "reqIds": [
+        "REQ-6"
       ],
       "version": 1
     }
@@ -46,13 +64,55 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Split login page into separate Admin and Customer entry points, restoring working admin login from Version 28",
+      "summary": "Staff-only login via Internet Identity (no public access)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "AO Farms UI — green header, farm hero banner, cow logo, beige background",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Dashboard with 6 summary cards, 7-day milk production chart, recent milk entries",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Cattle management — add/edit/delete with active/inactive status toggle",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Milk Production — log and track daily milk entries per cattle",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Inventory — stock management with low stock alerts (threshold 10)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Customer management — add/edit/delete with active/inactive status toggle",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Deliveries — delivery tracking (logged vs missed)",
       "reqIds": [],
       "status": "pending"
     }
   ],
   "gameProjectType": "none",
-  "projectName": "AO Farms Portal",
+  "projectName": "AO Farms",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

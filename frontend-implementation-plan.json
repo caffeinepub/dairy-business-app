@@ -1,105 +1,119 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Split login page into separate Admin and Customer entry points",
+  "title": "AO Farms Dashboard UI — Phase 1 Shell",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Create a login selection landing page with clearly labeled Admin and Customer entry points",
+      "summary": "Implement a top navigation bar with the AO Farms logo on the left and navigation links routing to existing app routes, with active link highlighted in dark green pill style",
       "acceptanceCriteria": [
-        "A login selection page is shown as the default landing route",
-        "Two distinct buttons or sections are visible: one for Admin and one for Customer",
-        "Clicking 'Admin Login' navigates to the admin authentication flow",
-        "Clicking 'Customer Login' navigates to the customer portal login form"
+        "Logo displays on the top-left with green cow icon and 'A.O. Farms' text",
+        "All 6 nav links are visible on desktop",
+        "Active route link is highlighted with a dark green filled style",
+        "Navigation links route to their respective pages"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/LoginSelection.tsx",
-          "operation": "create",
-          "description": "Create a landing page component that displays two prominent navigation options: 'Admin Login' and 'Customer Login'. Each option should be a card or button that clearly indicates its purpose. Use the authorization component to support role-based navigation. Style consistently with the existing AO Farms theme using Tailwind classes and OKLCH color tokens. Include the AO Farms logo from frontend/public/assets/generated/ao-farms-logo.dim_400x400.png at the top of the page."
-        },
-        {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/components/Layout.tsx",
           "operation": "modify",
-          "description": "Add a new route for the LoginSelection page at the root path '/'. Update the existing routing configuration to include this new landing page as the default entry point. Ensure the route is publicly accessible without authentication."
+          "description": "Replace the existing navigation bar implementation with a new one that displays the AO Farms logo (using frontend/public/assets/generated/ao-farms-logo.dim_120x80.png) on the left, followed by six navigation links (Dashboard, Cattle, Milk Production, Inventory, Customers, Deliveries) that route to their respective TanStack Router paths (/dashboard, /cattle, /milk-production, /inventory, /customers, /deliveries). Apply a filled dark-green pill/button style (using CSS custom property --farm-primary or #1a5c2a) to the active link. Ensure the nav bar is sticky at the top, uses the existing desktop and mobile layout structure, and integrates with TanStack Router's Link component for active state detection. Verify the generated logo image dimensions and reference it correctly."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Restore working admin login flow using Internet Identity with backend admin verification and dashboard redirect",
+      "summary": "Add a full-width hero banner below the nav bar on the Dashboard page showing an illustrated farm landscape with overlaid welcome text",
       "acceptanceCriteria": [
-        "Admin Login page shows an Internet Identity login button",
-        "After authentication, the backend isAdmin check is called",
-        "Successful admin authentication redirects to the admin dashboard",
-        "Non-admin principals see a clear 'Access denied' or 'Not authorized' message",
-        "Admin session persists across page refreshes"
+        "Hero banner spans full width of the page",
+        "Farm landscape illustration is rendered as the banner background",
+        "Title 'Welcome to AO Farms' and subtitle text are visible over the banner",
+        "A cow emoji or small cow icon appears next to the title"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/AdminLogin.tsx",
-          "operation": "create",
-          "description": "Create a dedicated admin login page that uses Internet Identity authentication via the useInternetIdentity hook. After successful II authentication, call the backend isCallerAdmin method to verify admin role. On success, redirect to '/admin' (the admin panel). If the principal is not an admin, display a clear error message like 'Access denied: Admin privileges required' and provide a logout button. Use the authorization component to handle authentication state. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Add a route for the AdminLogin page at '/admin-login'. Wire this route into the router configuration so it can be accessed from the LoginSelection page."
-        },
-        {
-          "path": "frontend/src/pages/AdminPanel.tsx",
-          "operation": "modify",
-          "description": "Update the AdminPanel component to redirect unauthenticated users to '/admin-login' instead of handling login inline. Remove any embedded login UI and rely on the dedicated AdminLogin page. Ensure the component still verifies admin status via isCallerAdmin and shows appropriate loading states."
+          "description": "Add a full-width hero banner section immediately below the Layout component's navigation bar. Use the generated farm landscape illustration frontend/public/assets/generated/farm-hero-banner.dim_1400x300.png as the background image. Overlay the text 'Welcome to AO Farms' (with a cow emoji 🐄 next to it) and the subtitle 'Here's your dairy farm overview for today' on the left side of the banner. Style the banner to span the full width of the page, ensure text is readable over the background (use a semi-transparent overlay or text shadow if needed), and match the farm-themed color palette. Verify the generated image path and dimensions before implementing."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Create dedicated Customer Login page with username/password authentication and customer portal redirect",
+      "summary": "Display 6 summary stat cards on the Dashboard in a single row showing cattle count, milk production, inventory, low stock, deliveries, and missed deliveries with icons and subtext",
       "acceptanceCriteria": [
-        "Customer Login page displays username and password input fields",
-        "Submitting valid credentials authenticates the customer via the backend loginCustomer call",
-        "Successful login stores the customer session (via CustomerAuthContext) and redirects to the customer portal",
-        "Invalid credentials display a user-friendly error message",
-        "Customer session persists in sessionStorage across page refreshes"
+        "All 6 stat cards are rendered in a responsive row",
+        "Each card shows label, value, subtext, and icon",
+        "Values are pulled from backend query hooks (cattle count, milk records, inventory, deliveries)",
+        "Low stock threshold is 10",
+        "Cards use cream/beige background matching farm theme"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/CustomerLogin.tsx",
-          "operation": "create",
-          "description": "Create a dedicated customer login page with username and password input fields. Use the useCustomerLogin mutation hook from frontend/src/hooks/useCustomerQueries.ts to authenticate via the backend customerLogin method. On successful authentication, call the CustomerAuthContext login function to store the session in sessionStorage, then redirect to '/portal'. Display user-friendly error messages for invalid credentials, account not found, or inactive accounts. Use shadcn/ui form components (Input, Button, Label) and maintain consistency with the AO Farms theme."
-        },
-        {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Add a route for the CustomerLogin page at '/customer-login'. Wire this route into the router configuration so it can be accessed from the LoginSelection page."
-        },
-        {
-          "path": "frontend/src/pages/CustomerPortal.tsx",
-          "operation": "modify",
-          "description": "Update the CustomerPortal component to redirect unauthenticated customers to '/customer-login' instead of showing an inline login form. Remove the embedded login UI and rely on the dedicated CustomerLogin page. Ensure authenticated customers can still access their orders and place new orders using the existing CustomerAuthContext."
+          "description": "Below the hero banner, add a responsive grid/row of 6 summary stat cards. Each card should display: (1) Total Cattle — total count with subtext showing active count from getAllCattle(); (2) Today's Milk — total litres from getAllMilkProductionRecords() filtered to today; (3) Inventory Items — total unique items from getAllInventoryItems(); (4) Low Stock — items with quantity below threshold 10 from getLowStockItems(); (5) Today's Deliveries — orders with Delivered status today from getAllOrders(); (6) Missed Deliveries — orders not delivered today from getAllOrders(). Use existing admin query hooks from useAdminQueries. Each card should have a label, numeric value, subtext, and a small icon (use Lucide React icons or emoji). Apply a light beige/cream background (CSS custom property --background or #f5f0e8) and green icon accents (--farm-primary or #1a5c2a). Ensure responsive layout (grid-cols-1 md:grid-cols-2 lg:grid-cols-6 or similar)."
         }
       ]
     },
     {
       "id": "REQ-4",
-      "summary": "Update app routing to use login selection as root and protect admin and customer portal routes",
+      "summary": "Add a 7-Day Milk Production line/area chart on the Dashboard showing daily milk totals for the last 7 days",
       "acceptanceCriteria": [
-        "Navigating to '/' shows the login selection page",
-        "Navigating directly to an admin route without authentication redirects to admin login",
-        "Navigating directly to the customer portal without a customer session redirects to customer login",
-        "Both portals are fully inaccessible without proper authentication"
+        "Chart renders in the lower-left panel of the Dashboard",
+        "X-axis shows last 7 days",
+        "Y-axis shows milk volume in litres",
+        "Data comes from milk production records"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Update the root route '/' to render the LoginSelection component. Add route guards or wrapper components for '/admin' and child admin routes that check authentication and admin status, redirecting to '/admin-login' if unauthorized. Add route guards for '/portal' that check customer authentication via CustomerAuthContext, redirecting to '/customer-login' if not authenticated. Ensure all protected routes properly enforce authentication before rendering content."
+          "description": "Below the stat cards row, add a two-column layout (left and right panels). In the left panel, render the existing MilkProductionTrendChart component (frontend/src/components/MilkProductionTrendChart.tsx) with the title '7-Day Milk Production'. Pass the last 7 days of milk production records from getAllMilkProductionRecords() filtered and aggregated by date. The chart should display daily totals with date on the X-axis and litres on the Y-axis. Ensure the panel has a card-style background (warm white) and appropriate padding. Use the existing MilkProductionTrendChart component without modification."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Add a Recent Milk Entries panel on the Dashboard listing the most recent milk production log entries with an empty state",
+      "acceptanceCriteria": [
+        "Panel appears in the lower-right of the Dashboard",
+        "Lists recent milk entries with cattle tag, date, and litres",
+        "Shows empty state message when no records exist",
+        "Displays at most 5–8 most recent entries"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "In the right panel of the two-column layout (next to the 7-Day Milk Production chart), add a 'Recent Milk Entries' section. Fetch milk production records from getAllMilkProductionRecords(), sort by date descending, and display the 5–8 most recent entries. Each entry should show the cattle tag, date (formatted), and volume in litres. If no records exist, display an empty state message like 'No milk production records yet'. Use a card-style background (warm white) and list or table layout. Ensure responsive sizing and match the farm theme."
+        }
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "summary": "Apply a consistent farm-themed visual style across all pages using beige/cream background, dark green primary color, and warm white cards",
+      "acceptanceCriteria": [
+        "Page background is beige/cream",
+        "Navigation bar uses dark green background",
+        "Primary buttons and active states use dark green",
+        "Cards have warm white background",
+        "Typography uses earthy/dark tones"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Update the existing CSS custom properties in the :root selector to enforce the farm-themed visual style. Set --background to a beige/cream color (#f5f0e8 or similar), --farm-primary to dark green (#1a5c2a or similar), --card to warm white, and adjust foreground/text colors to earthy/dark tones. Ensure these variables are used consistently across light and dark mode definitions. Do not create new global stylesheet paths; use the existing frontend/src/index.css entry point."
+        },
+        {
+          "path": "frontend/tailwind.config.js",
+          "operation": "modify",
+          "description": "Update the Tailwind color palette to align with the farm theme. Ensure 'farm' color tokens (farm-primary, farm-background, farm-accent) map to the appropriate OKLCH values for beige/cream backgrounds and dark green accents. Verify that the existing 'background', 'card', 'primary', and 'foreground' tokens in the theme.extend.colors section reflect the farm color scheme. No new color tokens are required if the existing ones can be reused."
         },
         {
           "path": "frontend/src/components/Layout.tsx",
           "operation": "modify",
-          "description": "Update the Layout component navigation to conditionally show admin and customer portal links based on authentication state. For unauthenticated users, show a link to the login selection page. Ensure the navigation reflects the new routing structure with separate admin and customer entry points."
+          "description": "Ensure the navigation bar background uses the dark green primary color (bg-farm-primary or bg-[#1a5c2a]) and that the main page content area uses the beige/cream background (bg-background or bg-[#f5f0e8]). Apply consistent padding and spacing to match the farm theme. This change should be integrated with the REQ-1 navigation bar update."
         }
       ]
     }
